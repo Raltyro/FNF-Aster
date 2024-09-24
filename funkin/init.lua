@@ -1,8 +1,5 @@
 require("funkin.loadmodules")
 
-local native = require("funkin.utils.native")
-native.setDarkMode(true)
-
 local file = native.askOpenFile('Open the fucking fnf song music something shit like damn', {{'Ogg Vorbis Files', '*.ogg*'}})
 if file then
 	local dir, file = file:sub(1, #file - #file:fileName()), file:fileName()

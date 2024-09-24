@@ -24,7 +24,7 @@ repeat v = active:pop(); if v == 0 then break elseif v == 1 then s = 0 end
 	collectgarbage(step)
 until s > 1]]
 
-local eventhandlers = {
+--[[local eventhandlers = {
 	keypressed = function(t, b, s, r) return love.keypressed(b, s, r, t) end,
 	keyreleased = function(t, b, s) return love.keyreleased(b, s, t) end,
 	touchpressed = function(t, id, x, y, dx, dy, p) return love.touchpressed(id, x, y, dx, dy, p, t) end,
@@ -34,7 +34,7 @@ local eventhandlers = {
 	joystickreleased = function(t, j, b) if love.joystickreleased then return love.joystickreleased(j, b, t) end end,
 	gamepadpressed = function(t, j, b) if love.gamepadpressed then return love.gamepadpressed(j, b, t) end end,
 	gamepadreleased = function(t, j, b) if love.gamepadreleased then return love.gamepadreleased(j, b, t) end end,
-}
+}]]
 function love.run()
 	love.framerate, love.unfocusedFramerate = math.max(select(3, love.window.getMode()).refreshrate, 60), 16
 	love.asyncInput, thread_event = false, love.thread.newThread(thread_event_code)
@@ -54,7 +54,7 @@ function love.run()
 		--[[if name:sub(1,5) == "mouse" and name ~= "mousefocus" and (name ~= "mousemoved" or love.mouse.isDown(1, 2)) then
 			love.handlers["touch"..name:sub(6)](0, a, ...)
 		end]]
-		if eventhandlers[name] then return eventhandlers[name](clock, a, ...) end
+		--if eventhandlers[name] then return eventhandlers[name](clock, a, ...) end
 		return love.handlers[name](a, ...)
 	end
 

@@ -1,3 +1,9 @@
+--
+-- native
+--
+-- i made this w co fellyn yukira -- ralty
+--
+
 local os, native = love.system.getOS()
 if os == "Windows" then
 	native = require((...) .. ".windows")

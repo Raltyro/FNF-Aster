@@ -47,15 +47,20 @@ ffi.cdef [[
 	typedef int BOOL;
 	typedef long LONG;
 	typedef uint32_t UINT;
+	typedef uint32_t UINT_PTR;
+	typedef int LRESULT;
 	typedef int HRESULT;
 	typedef unsigned int DWORD;
 	typedef const void* PVOID;
 	typedef const void* LPCVOID;
+	typedef UINT_PTR WPARAM;
+	typedef UINT_PTR LPARAM;
 	typedef const char* LPCSTR;
 	typedef DWORD HMENU;
 	typedef struct HWND HWND;
 	typedef void* HANDLE;
-    typedef HANDLE HCURSOR;
+	typedef void* HMODULE;
+	typedef HANDLE HCURSOR;
 
 	typedef struct tagRECT {
 		union{
@@ -89,8 +94,16 @@ ffi.cdef [[
 	HRESULT DwmSetWindowAttribute(HWND hwnd, DWORD dwAttribute, LPCVOID pvAttribute, DWORD cbAttribute);
 	HRESULT DwmFlush();
 
+	HMODULE GetModuleHandleA(LPCSTR lpModuleName);
+
+	LRESULT SendMessageA(HWND hwnd, UINT Msg, WPARAM wParam, LPARAM lParam);
+
 	HCURSOR LoadCursorA(HANDLE hInstance, const char* lpCursorName);
-    HCURSOR SetCursor(HCURSOR hCursor);
+	HCURSOR SetCursor(HCURSOR hCursor);
+
+	int GetSystemMetrics(int nIndex);
+	HANDLE LoadImageA(HANDLE hInstance, LPCSTR name, UINT type, int cx, int Cy, UINT fuLoad);
+	HANDLE LoadIconA(HANDLE hInstance, LPCSTR name);
 ]]
 
 --local Rect = ffi.metatype("RECT", {})
@@ -170,6 +183,20 @@ function Native.setDarkMode(enable)
 	if dwmapi.DwmSetWindowAttribute(window, 19, darkMode, 4) ~= 0 then
 		dwmapi.DwmSetWindowAttribute(window, 20, darkMode, 4)
 	end
+end
+
+
+function Native.setIcon(ico, no_physfs)
+	if not no_physfs and love.filesystem then ico = love.filesystem.getRealDirectory(ico) .. '\\' .. ico end
+	local window = getActiveWindow()
+
+	local hIconBig = ffi.C.LoadImageA(ffi.C.GetModuleHandleA(ffi.cast("const char*", "user32")), ffi.cast("const char*", ico), 0x1 --[[IMAGE_ICON]],
+		ffi.C.GetSystemMetrics(11 --[[SM_CXICON]]), ffi.C.GetSystemMetrics(12 --[[SM_CYICON]]), 0x10 --[[LR_LOADFROMFILE]])
+	local hIconSmall = ffi.C.LoadImageA(ffi.C.GetModuleHandleA(ffi.cast("const char*", "user32")), ffi.cast("const char*", ico), 0x1 --[[IMAGE_ICON]],
+		ffi.C.GetSystemMetrics(49 --[[SM_CxSMICON]]), ffi.C.GetSystemMetrics(50 --[[SM_CYSMICON]]), 0x10 --[[LR_LOADFROMFILE]])
+
+	ffi.C.SendMessageA(window, 0x80 --[[WM_SETICON]], 1 --[[ICON_BIG]], ffi.cast("LPARAM", hIconBig))
+	ffi.C.SendMessageA(window, 0x80 --[[WM_SETICON]], 0 --[[ICON_SMALL]], ffi.cast("LPARAM", hIconSmall))
 end
 
 return Native

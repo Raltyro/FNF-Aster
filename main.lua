@@ -3,6 +3,8 @@ io.stdout:setvbuf("no")
 require("run")
 require("lib.override")
 
+native = require("lib.native")
+
 conf = require("conf")
 
 -- If it's fused, and there no assets folder in the package, assume it's outside and mount outside the executable to the default directory
@@ -13,7 +15,6 @@ end
 function love.load()
 	local isMobile = love.system.getDevice() == "Mobile"
 
-	if not love.filesystem.isFused() then love.window.setIcon(love.image.newImageData('art/icon.png')) end
 	love.window.setTitle(conf.title)
 	love.window.setMode(conf.width, conf.height, {
 		fullscreen = isMobile,
@@ -21,6 +22,14 @@ function love.load()
 		vsync = 0,
 		usedpiscale = false
 	})
+	if not love.filesystem.isFused() then
+		if love.system.getOS() == "Windows" then
+			native.setIcon("icon.ico")
+		else
+			love.window.setIcon(love.image.newImageData('art/icons/iconOG.png'))
+		end
+	end
+	native.setDarkMode(true)
 
 	require("funkin")
 end
@@ -30,6 +39,42 @@ function love.update(dt)
 end
 
 function love.draw()
+
+end
+
+function love.keypressed(t, b, s, r)
+
+end
+
+function love.keyreleased(t, b, s)
+
+end
+
+function love.touchpressed(t, id, x, y, dx, dy, p)
+
+end
+
+function love.touchmoved(t, id, x, y, dx, dy, p)
+
+end
+
+function love.touchreleased(t, id, x, y, dx, dy, p)
+
+end
+
+function love.joystickpressed(t, j, b)
+
+end
+
+function love.joystickreleased(t, j, b)
+
+end
+
+function love.gamepadpressed(t, j, b)
+
+end
+
+function love.gamepadreleased(t, j, b)
 
 end
 
