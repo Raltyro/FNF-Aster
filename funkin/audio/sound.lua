@@ -48,7 +48,7 @@ function Sound:cleanup()
 
 	if self.loaded then
 		self:stop()
-		if self.isSource and self._source.release then
+		if not self.isSource and self._source.release then
 			self._source:release()
 		end
 	end
@@ -73,8 +73,8 @@ function Sound:load(asset, autoDestroy, onComplete)
 	if self.destroyed or asset == nil then return end
 	self:cleanup()
 
-	self._isSource = asset:typeOf("SoundData")
-	self._source = self._isSource and love.audio.newSource(asset) or asset
+	self.isSource = asset:typeOf("Source")
+	self._source = self.isSource and asset or love.audio.newSource(asset)
 	return self:init(autoDestroy, onComplete)
 end
 
