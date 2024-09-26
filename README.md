@@ -1,5 +1,5 @@
-# <img src="art/icons/icon16.png"> FNF-Aster (Funkin' Aster)
-[Friday Night Funkin'](https://github.com/FunkinCrew/funkin) Engine/Retake built using [LÖVE2d Framework](https://love2d.org) using lua, open-source and cross-platform.
+# <img src="art/icons/icon16.png" width=32> FNF-Aster (Funkin' Aster)
+[Friday Night Funkin'](https://github.com/FunkinCrew/funkin) Engine/Retake built using [LÖVE2d Framework](https://love2d.org) with lua, open-source and cross-platform.
 
 > [!NOTE]  
 > This only works for LÖVE 12.0 and above, you can download it from the main [LÖVE2d github repository](https://github.com/love2d/love) [actions](https://github.com/love2d/love/actions).
