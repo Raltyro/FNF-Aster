@@ -49,7 +49,7 @@ function funkin.init()
 	local input = tinyfiledialogs.inputBox{
 		title = "Enter song ID",
 		message = "Song ID?",
-		default_input = "song"
+		default_input = "hatena"
 	}
 	print(input)
 
@@ -60,7 +60,7 @@ function funkin.init()
 		details = "Listening to Song",
 		largeImageKey = "icon",
 		largeImageText = "Funkin' Aster",
-		smallImageKey = "iconSmall"
+		smallImageKey = "iconsmall"
 	})
 
 	local instData = love.sound.newSoundData("assets/songs/" .. song .. "/Inst" .. suffix .. ".ogg")

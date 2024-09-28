@@ -18,7 +18,7 @@ function tryload(dir, file, ...)
 end
 
 local lib
-if OS == "Windows" then
+if OS == "Windows" and love.getVersion() == 12 then -- LOVE 11.5 broke here...
 	lib = tryload(..., "discord-rpc-win64", "discord-rpc-win32")
 elseif OS == "Linux" then
 	lib = tryload(..., "libdiscord-rpc-linux")

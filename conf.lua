@@ -1,5 +1,5 @@
 function love.conf(t)
-	t.version = "12.0"
+	--t.version = "12.0"
 	t.identity = "FNF-Aster"
 	t.console = true
 	t.gammacorrect = false
