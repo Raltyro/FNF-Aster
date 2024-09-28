@@ -1,4 +1,4 @@
-# <img src="art/icons/icon16.png" width=32> FNF-Aster (Funkin' Aster)
+# <img src="art/icons/icon24.png" width=24> FNF-Aster (Funkin' Aster)
 [Friday Night Funkin'](https://github.com/FunkinCrew/funkin) Engine/Retake built using [LÖVE2d Framework](https://love2d.org) with lua, open-source and cross-platform.
 
 > [!NOTE]  

@@ -92,9 +92,9 @@ end
 function Sound:play(volume, looped, pitch, restart)
 	if not self.active or not self.loaded then return self end
 
-	self.volume = volume
-	self.looped = looped
-	self.pitch = pitch
+	self.volume = volume or self.volume
+	self.looped = looped or self.looped
+	self.pitch = pitch or self.pitch
 
 	if restart then
 		pcall(self._source.stop, self._source)

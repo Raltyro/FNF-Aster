@@ -10,19 +10,27 @@ conf = require("conf")
 -- If it's fused, and there no assets folder in the package, assume it's outside and mount outside the executable to the default directory
 if (love.filesystem.isFused() or not love.filesystem.getInfo("assets")) and love.filesystem.mountFullPath then
 	love.filesystem.mountFullPath(love.filesystem.getSourceBaseDirectory(), "")
+else
+	sourceMode = true
 end
+
+local funkin = require("funkin")
 
 function love.load()
 	local isMobile = love.system.getDevice() == "Mobile"
 
-	love.window.setTitle(conf.title)
+	if sourceMode then
+		love.window.setTitle(conf.title .. " (SOURCE)")
+	else
+		love.window.setTitle(conf.title)
+	end
 	love.window.setMode(conf.width, conf.height, {
 		fullscreen = isMobile,
 		resizable = not isMobile,
 		vsync = 0,
 		usedpiscale = false
 	})
-	if not love.filesystem.isFused() then
+	if sourceMode then
 		if love.system.getOS() == "Windows" then
 			native.setIcon("icon.ico")
 		else
@@ -31,11 +39,11 @@ function love.load()
 	end
 	native.setDarkMode(true)
 
-	require("funkin")
+	funkin.init()
 end
 
 function love.update(dt)
-	if yeah then yeah:update(dt) end
+	funkin.update(dt)
 end
 
 function love.draw()

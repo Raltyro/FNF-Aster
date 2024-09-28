@@ -1,0 +1,7 @@
+# Compiled Lua sources
+luac.out
+
+# Ignore
+*.lnk
+*.sublime-workspace
+.private
