@@ -12,9 +12,10 @@ Extra **love** to Friday Night Funkin', it's team, community & the modding scene
 
 # Libraries Used
 \* meaning the library has been modified for this project specifically
-\! meaing the library has been wrapped to be usable for lua
+
+\~ meaning the library has been wrapped to be usable for lua
 
 - classic\* by [rxi](https://github.com/rxi) https://github.com/rxi/classic
 - lua-discordRPC\* by [Joel Schumacher](https://github.com/pfirsich), & [Semyon](https://github.com/semyon422) https://github.com/pfirsich/lua-discordRPC
-- lua-tinyfiledialogs\! by [Ralty](https://github.com/Raltyro) https://github.com/Raltyro/lua-tinyfiledialogs
+- lua-tinyfiledialogs\~ by [Ralty](https://github.com/Raltyro) https://github.com/Raltyro/lua-tinyfiledialogs
 - override\* by [Ralty](https://github.com/Raltyro)
