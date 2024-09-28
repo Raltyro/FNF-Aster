@@ -1,49 +1,9 @@
 local Native = {}
 
 local ffi = require("ffi")
-local comdlg32, dwmapi = ffi.load("comdlg32"), ffi.load("dwmapi")
+local dwmapi = ffi.load("dwmapi")
 
 ffi.cdef [[
-	typedef void* HWND;
-	typedef const char* LPCSTR;
-	typedef char* LPSTR;
-	typedef int BOOL;
-	typedef unsigned int DWORD;
-	typedef void* HINSTANCE;
-	typedef unsigned short WORD;
-	typedef long long LPARAM;
-	typedef const void* LPCVOID;
-
-	typedef struct {
-		DWORD     lStructSize;
-		HWND      hwndOwner;
-		HINSTANCE hInstance;
-		LPCSTR    lpstrFilter;
-		LPSTR     lpstrCustomFilter;
-		DWORD     nMaxCustFilter;
-		DWORD     nFilterIndex;
-		LPSTR     lpstrFile;
-		DWORD     nMaxFile;
-		LPSTR     lpstrFileTitle;
-		DWORD     nMaxFileTitle;
-		LPCSTR    lpstrInitialDir;
-		LPCSTR    lpstrTitle;
-		DWORD     Flags;
-		WORD      nFileOffset;
-		WORD      nFileExtension;
-		LPCSTR    lpstrDefExt;
-		LPARAM    lCustData;
-		LPCVOID   lpfnHook;
-		LPCSTR    lpTemplateName;
-		void*     pvReserved;
-		DWORD     dwReserved;
-		DWORD     FlagsEx;
-	} WINDOWDIALOGUE;
-
-	BOOL GetSaveFileNameA(WINDOWDIALOGUE *lpofn);
-	BOOL GetOpenFileNameA(WINDOWDIALOGUE *lpofn);
-
-
 	typedef int BOOL;
 	typedef long LONG;
 	typedef uint32_t UINT;
@@ -57,7 +17,7 @@ ffi.cdef [[
 	typedef UINT_PTR LPARAM;
 	typedef const char* LPCSTR;
 	typedef DWORD HMENU;
-	typedef struct HWND HWND;
+	typedef void* HWND;
 	typedef void* HANDLE;
 	typedef void* HMODULE;
 	typedef HANDLE HCURSOR;
@@ -118,36 +78,6 @@ local function getWindowHandle(title)
 	return window
 end
 local function getActiveWindow() return ffi.C.GetActiveWindow() or getWindowHandle(love.window.getTitle()) end
-
-local function openDialogue(title, fileTypes, initialFile)
-	local ofn = ffi.new("WINDOWDIALOGUE")
-	ofn.lStructSize = ffi.sizeof("WINDOWDIALOGUE")
-
-	if not fileTypes then 
-		ofn.lpstrFilter = "All Files\0*.*"
-	else
-		local filters = ""
-		for _, type in ipairs(fileTypes) do filters = filters .. type[1] .. "\0" .. type[2] .. "\0" end
-		ofn.lpstrFilter = filters
-	end
-
-	ofn.lpstrFile, ofn.nMaxFile = initialFile and ffi.new("char[260]", initialFile) or ffi.new("char[260]"), 260
-	ofn.lpstrFileTitle, ofn.nMaxFileTitle = ffi.new("char[260]"), 260
-	ofn.lpstrTitle = title
-	ofn.Flags = 0x00000002
-
-	return ofn
-end
-
-function Native.askOpenFile(title, fileTypes)
-	local dialogue = openDialogue(title or "Open File", fileTypes)
-	if comdlg32.GetOpenFileNameA(dialogue) == 1 then return ffi.string(dialogue.lpstrFile) end
-end
-
-function Native.askSaveAsFile(title, fileType, initialFile)
-	local dialogue = openDialogue(title or "Save As", fileTypes, "")
-	if comdlg32.GetSaveFileNameA(dialogue) == 1 then return ffi.string(dialogue.lpstrFile) end
-end
 
 Native.defaultCursorType = "ARROW"
 Native.cursorType = {

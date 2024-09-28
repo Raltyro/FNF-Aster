@@ -1,7 +1,8 @@
 require("funkin.loadmodules")
 
 local funkin = {}
-local yeah
+local tinyfiledialogs = require("lib.tinyfiledialogs")
+local discordRPC = require("lib.discordRPC")
 
 function funkin.init()
 	--[=[local file = native.askOpenFile('Open the fucking fnf song music something shit like damn', {{'Ogg Vorbis Files', '*.ogg*'}})
@@ -43,7 +44,24 @@ function funkin.init()
 	else
 		love.event.quit()
 	end]=]
-	local song, suffix, player, opponent = "8-28-63", "", "", ""
+
+	discordRPC.initialize("1289598322767691776", true)
+	local input = tinyfiledialogs.inputBox{
+		title = "Enter song ID",
+		message = "Song ID?",
+		default_input = "song"
+	}
+	print(input)
+
+	local song, suffix, player, opponent = input, "", "", ""
+
+	discordRPC.updatePresence({
+		state = song:capitalize(),
+		details = "Listening to Song",
+		largeImageKey = "icon",
+		largeImageText = "Funkin' Aster",
+		smallImageKey = "iconSmall"
+	})
 
 	local instData = love.sound.newSoundData("assets/songs/" .. song .. "/Inst" .. suffix .. ".ogg")
 	local playerData, opponentData
@@ -63,12 +81,11 @@ function funkin.init()
 		if opponent then opponent:play(nil, nil, nil, true) end
 	end
 	inst:load(instData, false, play)
-	yeah = inst
 	play()
 end
 
 function funkin.update(dt)
-	if yeah then yeah:update(dt) end
+	discordRPC.runCallbacks()
 end
 
 return funkin

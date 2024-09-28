@@ -1,4 +1,6 @@
 --
+-- https://github.com/rxi/classic
+--
 -- classic
 --
 -- Copyright (c) 2014, rxi

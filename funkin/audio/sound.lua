@@ -1,3 +1,5 @@
+local SoundManager = require("funkin.managers.soundmanager")
+
 local Sound = Basic:extend("Sound", ...)
 
 function Sound:new(x, y)
@@ -43,6 +45,7 @@ end
 function Sound:cleanup()
 	self.active = false
 	self.target = nil
+	self.group = nil
 	self.onComplete = nil
 	self.isSource = false
 
@@ -121,7 +124,7 @@ function Sound:stop()
 end
 
 function Sound:update(dt)
-	local isFinished = self:get_finished(dt)
+	local isFinished = self.finished
 	if isFinished and not self._wasFinished then
 		local onComplete = self.onComplete
 		if self.autoDestroy then
@@ -152,13 +155,25 @@ function Sound:onFocus(focus)
 	end
 end
 
+function Sound:getActualGroup()
+	return self.group or SoundManager
+end
+
+function Sound:getActualX()
+	return self.x + self:getActualGroup():getActualX()
+end
+
+function Sound:getActualY()
+	return self.y + self:getActualGroup():getActualY()
+end
+
 function Sound:getActualVolume()
-	if SoundManager and SoundManager.muted or self.muted then return 0 end
-	return self._volume * (SoundManager and SoundManager.volume or 1)
+	if self.muted then return 0 end
+	return self._volume * self:getActualGroup():getActualVolume()
 end
 
 function Sound:getActualPitch()
-	return self._pitch * (SoundManager and SoundManager.pitch or 1)
+	return self._pitch * self:getActualGroup():getActualPitch()
 end
 
 function Sound:get_loaded()
@@ -180,8 +195,8 @@ function Sound:get_playing()
 	return success and playing
 end
 
-function Sound:get_finished(dt)
-	return self.active and not self.paused and not self.looped and (not self.playing or (dt and self.time + dt / 2 > self.duration))
+function Sound:get_finished()
+	return self.active and not self.paused and not self.looped and not self.playing
 end
 
 function Sound:get_time()
