@@ -18,6 +18,7 @@ ffi.cdef [[
 	typedef UINT_PTR WPARAM;
 	typedef UINT_PTR LPARAM;
 	typedef const char* LPCSTR;
+	typedef const wchar_t* LPCWSTR;
 	typedef DWORD HMENU;
 	typedef void* HWND;
 	typedef void* HANDLE;
@@ -73,6 +74,7 @@ ffi.cdef [[
 	HWND FindWindowExA(HWND hwndParent, HWND hwndChildAfter, LPCSTR lpszClass, LPCSTR lpszWindow);
 	HWND GetActiveWindow(void);
 	LONG SetWindowLongA(HWND hWnd, int nIndex, LONG dwNewLong);
+	BOOL SetWindowTextA(HWND hWnd, LPCSTR lpString);
 	BOOL ShowWindow(HWND hWnd, int nCmdShow);
 	BOOL UpdateWindow(HWND hWnd);
 	HWND SetFocus(HWND HWnd);
@@ -178,6 +180,12 @@ function native.setDarkMode(title, enable, refresh)
 	end
 end
 
+function native.setWindowTitle(hwnd, title)
+	if hwnd == nil then return end
+
+	ffi.C.SetWindowTextA(hwnd, ffi.cast("LPCSTR", title))
+end
+
 local IMAGE_ICON = 0x1
 local LR_LOADFROMFILE = 0x10
 local WM_SETICON, WM_GETICON = 0x80, 0x7f
@@ -234,11 +242,11 @@ function native.loadIcon(ico, iconSize, no_physfs)
 
 		local hIconBig, hIconSmall
 		if iconSize == 0 or iconSize == nil then
-			hIconSmall = ffi.C.LoadImageA(ffi.C.GetModuleHandleA(ffi.cast("const char*", "user32")), ffi.cast("const char*", ico),
+			hIconSmall = ffi.C.LoadImageA(ffi.C.GetModuleHandleA(ffi.cast("LPCSTR", "user32")), ffi.cast("LPCSTR", ico),
 				IMAGE_ICON, ffi.C.GetSystemMetrics(SM_CXSMICON), ffi.C.GetSystemMetrics(SM_CYSMICON), LR_LOADFROMFILE)
 		end
 		if iconSize == 1 or iconSize == nil then
-			hIconBig = ffi.C.LoadImageA(ffi.C.GetModuleHandleA(ffi.cast("const char*", "user32")), ffi.cast("const char*", ico),
+			hIconBig = ffi.C.LoadImageA(ffi.C.GetModuleHandleA(ffi.cast("LPCSTR", "user32")), ffi.cast("LPCSTR", ico),
 				IMAGE_ICON, ffi.C.GetSystemMetrics(SM_CXICON), ffi.C.GetSystemMetrics(SM_CYICON), LR_LOADFROMFILE)
 		end
 
