@@ -49,9 +49,8 @@ function funkin.init()
 	local input = tinyfiledialogs.inputBox{
 		title = "Enter song ID",
 		message = "Song ID?",
-		default_input = "hatena"
+		default_input = "timeless-daydream"
 	}
-	print(input)
 
 	local song, suffix, player, opponent = input, "", "", ""
 
@@ -62,6 +61,7 @@ function funkin.init()
 		largeImageText = "Funkin' Aster",
 		smallImageKey = "iconsmall"
 	})
+	print(song)
 
 	local instData = love.sound.newSoundData("assets/songs/" .. song .. "/Inst" .. suffix .. ".ogg")
 	local playerData, opponentData
@@ -82,6 +82,8 @@ function funkin.init()
 	end
 	inst:load(instData, false, play)
 	play()
+
+	native.showNotification(native.getIcon(0), native.getIcon(1), "Listening to Song", song:capitalize())
 end
 
 function funkin.update(dt)

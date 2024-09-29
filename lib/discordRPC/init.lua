@@ -24,6 +24,8 @@ elseif OS == "Linux" then
 	lib = tryload(..., "libdiscord-rpc-linux")
 elseif OS == "OS X" then
 	lib = tryload(..., "libdiscord-rpc-mac")
+else
+	lib = tryload(..., "discord-rpc", "libdiscord-rpc")
 end
 
 if not lib then

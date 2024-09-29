@@ -30,6 +30,7 @@ function love.load()
 		vsync = 0,
 		usedpiscale = false
 	})
+	native.setDarkMode(true)
 	if sourceMode then
 		if love.system.getOS() == "Windows" then
 			native.setIcon("icon.ico")
@@ -37,7 +38,6 @@ function love.load()
 			love.window.setIcon(love.image.newImageData('art/icons/iconOG.png'))
 		end
 	end
-	native.setDarkMode(true)
 
 	funkin.init()
 end

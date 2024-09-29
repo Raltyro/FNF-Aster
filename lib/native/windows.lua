@@ -1,9 +1,11 @@
-local Native = {}
+local native = {}
 
 local ffi = require("ffi")
-local dwmapi = ffi.load("dwmapi")
+local dwmapi, shell32 = ffi.load("dwmapi"), ffi.load("shell32")
 
 ffi.cdef [[
+	void Sleep(int ms);
+
 	typedef int BOOL;
 	typedef long LONG;
 	typedef uint32_t UINT;
@@ -19,8 +21,32 @@ ffi.cdef [[
 	typedef DWORD HMENU;
 	typedef void* HWND;
 	typedef void* HANDLE;
+	typedef void* HICON;
 	typedef void* HMODULE;
 	typedef HANDLE HCURSOR;
+
+	typedef struct {int Data[4];} GUID;
+
+	typedef struct {
+		DWORD cbSize;
+		HWND  hWnd;
+		UINT  uID;
+		UINT  uFlags;
+		UINT  uCallbackMessage;
+		HICON hIcon;
+		char  szTip[128];
+		DWORD dwState;
+		DWORD dwStateMask;
+		char  szInfo[256];
+		union {
+			UINT uTimeout;
+			UINT uVersion;
+		};
+		char  szInfoTitle[64];
+		DWORD dwInfoFlags;
+		GUID  guidItem;
+		HICON hBalloonIcon;
+	} NOTIFYICONDATAA;
 
 	typedef struct tagRECT {
 		union{
@@ -49,6 +75,8 @@ ffi.cdef [[
 	LONG SetWindowLongA(HWND hWnd, int nIndex, LONG dwNewLong);
 	BOOL ShowWindow(HWND hWnd, int nCmdShow);
 	BOOL UpdateWindow(HWND hWnd);
+	HWND SetFocus(HWND HWnd);
+	HWND GetConsoleWindow();
 
 	HRESULT DwmGetWindowAttribute(HWND hwnd, DWORD dwAttribute, PVOID pvAttribute, DWORD cbAttribute);
 	HRESULT DwmSetWindowAttribute(HWND hwnd, DWORD dwAttribute, LPCVOID pvAttribute, DWORD cbAttribute);
@@ -64,6 +92,10 @@ ffi.cdef [[
 	int GetSystemMetrics(int nIndex);
 	HANDLE LoadImageA(HANDLE hInstance, LPCSTR name, UINT type, int cx, int Cy, UINT fuLoad);
 	HANDLE LoadIconA(HANDLE hInstance, LPCSTR name);
+	BOOL DestroyIcon(HANDLE hIcon);
+
+	BOOL Shell_NotifyIconA(int dwMessage, NOTIFYICONDATAA * lpData);
+	BOOL Shell_NotifyIconW(int dwMessage, NOTIFYICONDATAA * lpData);
 ]]
 
 --local Rect = ffi.metatype("RECT", {})
@@ -79,8 +111,23 @@ local function getWindowHandle(title)
 end
 local function getActiveWindow() return ffi.C.GetActiveWindow() or getWindowHandle(love.window.getTitle()) end
 
-Native.defaultCursorType = "ARROW"
-Native.cursorType = {
+local function GetClassLongPtr(hWnd, nIndex)
+	if ffi.sizeof(hWnd) > 4 then return ffi.C.GetClassLongPtrA(hWnd, nIndex)
+	else return ffi.cast("UINT_PTR", ffi.C.GetClassLong(hWnd, nIndex)) end
+end
+
+local function copyString(dest_array_ptr, str)
+	ffi.copy(dest_array_ptr, (str or ""):sub(1, ffi.sizeof(dest_array_ptr) - 1))
+end
+
+function native.sleep(s)
+	ffi.C.Sleep(s * 1000)
+end
+
+native.getWindowHandle, native.getActiveWindow = getWindowHandle, getActiveWindow
+
+native.defaultCursorType = "ARROW"
+native.cursorType = {
 	ARROW = 32512,
 	IBEAM = 32513,
 	WAIT = 32514,
@@ -99,34 +146,151 @@ Native.cursorType = {
 	PERSON = 32672
 }
 
-function Native.setCursor(type)
-	local cursorType = Native.cursorType[type:upper()]
+native.defaultIconType = 32512
+native.iconType = {
+	APPLICATION = 32512,
+	ERROR = 32513,
+	QUESTION = 32514,
+	WARNING = 32515,
+	INFORMATION = 32516,
+	WINLOGO = 32517,
+	SHIELD = 32518
+}
+
+function native.setCursor(type)
+	local cursorType = native.cursorType[type:upper()]
 	if cursorType then
 		ffi.C.SetCursor(ffi.C.LoadCursorA(nil, ffi.cast("const char*", cursorType)))
 	end
 end
 
-function Native.setDarkMode(enable)
-	local window = getActiveWindow()
+function native.setDarkMode(title, enable, refresh)
+	if type(title) == 'boolean' then enable, refresh, title = title, enable, nil end
+	local window = title and getWindowHandle(title) or getActiveWindow()
 
 	local darkMode = ffi.new("int[1]", toInt(enable))
 	if dwmapi.DwmSetWindowAttribute(window, 19, darkMode, 4) ~= 0 then
 		dwmapi.DwmSetWindowAttribute(window, 20, darkMode, 4)
+		if refresh then
+			ffi.C.ShowWindow(window, 0); ffi.C.ShowWindow(window, 1)
+			ffi.C.SetFocus(window)
+		end
 	end
 end
 
+local IMAGE_ICON = 0x1
+local LR_LOADFROMFILE = 0x10
+local WM_SETICON, WM_GETICON = 0x80, 0x7f
+local ICON_SMALL, ICON_BIG, ICON_SMALL2 = 0, 1, 2
+local GCL_HICONSM, GCL_HICON = -34, -14
+local SM_CXICON, SM_CYICON = 11, 12
+local SM_CXSMICON, SM_CYSMICON = 49, 50
 
-function Native.setIcon(ico, no_physfs)
-	if not no_physfs and love.filesystem then ico = love.filesystem.getRealDirectory(ico) .. '\\' .. ico end
-	local window = getActiveWindow()
+local function setIco(title, hIconBig, hIconSmall, noDestroy)
+	local window = title and getWindowHandle(title) or getActiveWindow()
 
-	local hIconBig = ffi.C.LoadImageA(ffi.C.GetModuleHandleA(ffi.cast("const char*", "user32")), ffi.cast("const char*", ico), 0x1 --[[IMAGE_ICON]],
-		ffi.C.GetSystemMetrics(11 --[[SM_CXICON]]), ffi.C.GetSystemMetrics(12 --[[SM_CYICON]]), 0x10 --[[LR_LOADFROMFILE]])
-	local hIconSmall = ffi.C.LoadImageA(ffi.C.GetModuleHandleA(ffi.cast("const char*", "user32")), ffi.cast("const char*", ico), 0x1 --[[IMAGE_ICON]],
-		ffi.C.GetSystemMetrics(49 --[[SM_CxSMICON]]), ffi.C.GetSystemMetrics(50 --[[SM_CYSMICON]]), 0x10 --[[LR_LOADFROMFILE]])
+	if not noDestroy then
+		local pIconBig, pIconSmall = native.getIcon(title)
+		if pIconBig then ffi.C.DestroyIcon(pIconBig) end
+		if pIconSmall then ffi.C.DestroyIcon(pIconSmall) end
+	end
 
-	ffi.C.SendMessageA(window, 0x80 --[[WM_SETICON]], 1 --[[ICON_BIG]], ffi.cast("LPARAM", hIconBig))
-	ffi.C.SendMessageA(window, 0x80 --[[WM_SETICON]], 0 --[[ICON_SMALL]], ffi.cast("LPARAM", hIconSmall))
+	ffi.C.SendMessageA(window, WM_SETICON, ICON_BIG, ffi.cast("LPARAM", hIconBig or nil))
+	ffi.C.SendMessageA(window, WM_SETICON, ICON_SMALL, ffi.cast("LPARAM", hIconSmall or nil))
+	return hIconBig, hIconSmall
 end
 
-return Native
+function native.setIcon(title, ico, no_physfs, noDestroy)
+	if type(ico) == 'cdata' or type(title) == "cdata" then
+		return type(title) == "string" and setIco(title, ico, no_physfs) or setIco(nil, title, ico)
+	end
+	if type(ico) ~= 'string' then ico, no_physfs, noDestroy, title = title, ico, no_physfs, nil end
+
+	local hIconBig, hIconSmall = native.loadIcon(ico, nil, no_physfs)
+	return setIco(title, hIconBig, hIconSmall, noDestroy)
+end
+
+function native.getIcon(title, iconSize)
+	if type(title) ~= 'string' then iconSize, title = title, nil end
+	local window = title and getWindowHandle(title) or getActiveWindow()
+
+	local hIconBig, hIconSmall
+	if iconSize == 0 or iconSize == nil then
+		hIconSmall = ffi.cast("HICON", ffi.C.SendMessageA(window, WM_GETICON, ICON_SMALL, 0) or GetClassLongPtr(window, GCL_HICONSM))
+	end
+	if iconSize == 1 or iconSize == nil then
+		hIconBig = ffi.cast("HICON", ffi.C.SendMessageA(window, WM_GETICON, ICON_BIG, 0) or GetClassLongPtr(window, GCL_HICON))
+	end
+
+	if not hIconSmall and not hIconBig then return ffi.cast("HICON", ffi.C.SendMessageA(window, WM_GETICON, ICON_SMALL2, 0))
+	elseif iconSize == 0 then return hIconSmall
+	elseif iconSize == 1 then return hIconBig
+	else return hIconBig, hIconSmall, ffi.cast("HICON", ffi.C.SendMessageA(window, WM_GETICON, ICON_SMALL2, 0)) end
+end
+
+function native.loadIcon(ico, iconSize, no_physfs)
+	if iconSize ~= nil or ico:lower():endsWith('.ico') then
+		if not no_physfs and love.filesystem then ico = love.filesystem.getRealDirectory(ico) .. '/' .. ico end
+
+		local hIconBig, hIconSmall
+		if iconSize == 0 or iconSize == nil then
+			hIconSmall = ffi.C.LoadImageA(ffi.C.GetModuleHandleA(ffi.cast("const char*", "user32")), ffi.cast("const char*", ico),
+				IMAGE_ICON, ffi.C.GetSystemMetrics(SM_CXSMICON), ffi.C.GetSystemMetrics(SM_CYSMICON), LR_LOADFROMFILE)
+		end
+		if iconSize == 1 or iconSize == nil then
+			hIconBig = ffi.C.LoadImageA(ffi.C.GetModuleHandleA(ffi.cast("const char*", "user32")), ffi.cast("const char*", ico),
+				IMAGE_ICON, ffi.C.GetSystemMetrics(SM_CXICON), ffi.C.GetSystemMetrics(SM_CYICON), LR_LOADFROMFILE)
+		end
+
+		if iconSize == 0 then return hIconSmall
+		elseif iconSize == 1 then return hIconBig
+		else return hIconBig, hIconSmall end
+	else
+		return ffi.C.LoadIconA(nil, ffi.cast("const char*", native.iconType[ico and ico:upper() or native.defaultIconType]))
+	end
+end
+
+-- stolen from https://stackoverflow.com/questions/74952766/how-can-i-send-a-windows-notification-in-lua
+function native.createNotifyData(handle, trayIcon, balloonIcon, timeout)
+	if type(handle) == "cdata" then trayIcon, balloonIcon, handle = handle, trayIcon, nil end
+
+	local notifyData = ffi.new"NOTIFYICONDATAA"
+	notifyData.cbSize = ffi.sizeof(notifyData)
+	notifyData.hWnd = handle or getActiveWindow()
+	notifyData.uFlags = 1 + 2  -- NIF_MESSAGE | NIF_ICON
+	notifyData.hIcon = trayIcon
+	notifyData.uVersion = 4
+	notifyData.uTimeout = timeout or 5
+	notifyData.hBalloonIcon = balloonIcon
+	shell32.Shell_NotifyIconA(0, notifyData)  -- NIM_ADD
+	shell32.Shell_NotifyIconA(4, notifyData)  -- NIM_SETVERSION
+
+	return notifyData
+end
+
+function native.destroyNotifyData(notifyData, dontDestroyIcons)
+	if not dontDestroyIcons then
+		if notifyData.hIcon ~= nil then ffi.C.DestroyIcon(notifyData.hIcon) end
+		if notifyData.hBalloonIcon ~= nil then ffi.C.DestroyIcon(notifyData.hBalloonIcon) end
+	end
+	shell32.Shell_NotifyIconA(2, notifyData)  -- NIM_DELETE
+end
+
+function native.showNotifyData(notifyData, title, text)
+	notifyData.uFlags = 1 + 2 + 16   -- NIF_MESSAGE | NIF_ICON | NIF_INFO
+	notifyData.dwInfoFlags = 4 + 32  -- NIIF_USER | NIIF_LARGE_ICON
+	copyString(notifyData.szInfoTitle, title)
+	copyString(notifyData.szInfo, text)
+	shell32.Shell_NotifyIconA(1, notifyData) -- NIM_MODIFY
+end
+
+function native.showNotification(handle, trayIcon, balloonIcon, title, text)
+	if type(handle) == "cdata" then trayIcon, balloonIcon, title, text, dontDestroyIcons, handle = handle, trayIcon, balloonIcon, title, text, nil end
+	if type(balloonIcon) == "string" then title, text, dontDestroyIcons, balloonIcon = balloonIcon, title, text, nil end
+
+	local notifyData = native.createNotifyData(handle, trayIcon, balloonIcon)
+	native.showNotifyData(notifyData, title, text)
+	return notifyData
+end
+
+return native

@@ -15,16 +15,20 @@ local Classic = {__class = "Classic"}
 
 function Classic:new() end
 
+local __class, get_, set_, _ = "__class", "get_", "set_", "_"
 function Classic:__index(k)
 	local cls = getmetatable(self)
-	local getter = rawget(rawget(self, '__class') == nil and cls or self, 'get_' .. k)
-	if getter == nil then return cls[k]
+	local getter = rawget(rawget(self, __class) == nil and cls or self, get_ .. k)
+	if getter == nil then
+		local v = rawget(self, k, _ .. k)
+		if v ~= nil then return v end
+		return cls[k]
 	else return getter(self) end
 end
 
 function Classic:__newindex(k, v)
-	local isObj = rawget(self, '__class') == nil
-	local setter = rawget(isObj and getmetatable(self) or self, 'set_' .. k)
+	local isObj = rawget(self, __class) == nil
+	local setter = rawget(isObj and getmetatable(self) or self, set_ .. k)
 	if setter == nil then return rawset(self, k, v)
 	elseif isObj then return setter(self, v)
 	else return setter(v) end
