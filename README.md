@@ -15,6 +15,7 @@ Extra **love** to Friday Night Funkin', it's team, community & the modding scene
 
 - classic\* by [rxi](https://github.com/rxi) https://github.com/rxi/classic
 - lua-discordRPC\* by [Joel Schumacher](https://github.com/pfirsich), & [Semyon](https://github.com/semyon422) https://github.com/pfirsich/lua-discordRPC
+	- discord-rpc\* by [discord](https://github.com/discord), & [harmonytf](https://github.com/harmonytf/discord-rpc) https://github.com/discord/discord-rpc legacy | https://github.com/harmonytf/discord-rpc
 - lua-tinyfiledialogs by [Ralty](https://github.com/Raltyro) https://github.com/Raltyro/lua-tinyfiledialogs
 	- tinyfiledialogs by [Guillaume Vareille](https://sourceforge.net/u/vareille/profile/) aka [u/asparata](https://www.reddit.com/user/asparata/) https://sourceforge.net/projects/tinyfiledialogs/
 - override\* by [Ralty](https://github.com/Raltyro)
