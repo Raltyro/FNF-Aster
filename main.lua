@@ -42,50 +42,19 @@ function love.load()
 	funkin.init()
 end
 
-function love.update(dt)
-	funkin.update(dt)
-end
+love.update = funkin.update
+love.draw = funkin.draw
+love.keypressed = funkin.keypressed
+love.keyreleased = funkin.keyreleased
+love.touchpressed = funkin.touchpressed
+love.touchmoved = funkin.touchmoved
+love.touchreleased = funkin.touchreleased
+love.joystickpressed = funkin.joystickpressed
+love.joystickreleased = funkin.joystickreleased
+love.gamepadpressed = funkin.gamepadpressed
+love.gamepadreleased = funkin.gamepadreleased
 
-function love.draw()
-
-end
-
-function love.keypressed(t, b, s, r)
-
-end
-
-function love.keyreleased(t, b, s)
-
-end
-
-function love.touchpressed(t, id, x, y, dx, dy, p)
-
-end
-
-function love.touchmoved(t, id, x, y, dx, dy, p)
-
-end
-
-function love.touchreleased(t, id, x, y, dx, dy, p)
-
-end
-
-function love.joystickpressed(t, j, b)
-
-end
-
-function love.joystickreleased(t, j, b)
-
-end
-
-function love.gamepadpressed(t, j, b)
-
-end
-
-function love.gamepadreleased(t, j, b)
-
-end
 
 function love.quit()
-
+	funkin.quit()
 end

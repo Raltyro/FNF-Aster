@@ -19,10 +19,11 @@ function Signal:dispatch(...)
 
 	self.processingListeners = false
 
-	repeat
-		local i = #self.pendingRemove
+	local i = #self.pendingRemove
+	while i ~= 0 do
 		self.handlers[self.pendingRemove[i]], self.pendingRemove[i] = nil
-	until i == 1
+		i = #self.pendingRemove
+	end
 end
 
 function Signal:add(listener, loops)

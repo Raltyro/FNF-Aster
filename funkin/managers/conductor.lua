@@ -20,6 +20,8 @@ end
 function Conductor.reset() Conductor.instance = Conductor() end
 
 function Conductor:new()
+	Basic.super.new(self)
+
 	self.onMeasureHit = Signal()
 	self.onBeatHit = Signal()
 	self.onStepHit = Signal()

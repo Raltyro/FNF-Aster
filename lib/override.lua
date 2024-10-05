@@ -76,7 +76,7 @@ local math_min, math_max, math_floor, math_ceil = math.min, math.max, math.floor
 local function math_round(x) return x >= 0 and math_floor(x + .5) or math_ceil(x - .5) end
 math.round = math_round
 
-function math.clamp(x, min, max) return math_min(math_max(x, min or 0), max or 1) end
+function math.clamp(x, min, max) return math_min(math_max(x, min), max) end
 
 function math.type(v)
 	return (v >= -2147483648 and v <= 2147483647 and math_floor(v) == v) and
@@ -84,7 +84,6 @@ function math.type(v)
 end
 
 -- EXTRA FUNCTIONS
-math.positive_infinity, math.negative_infinity = math.huge, -math.huge
 math.noise = love.math.perlinNoise or love.math.noise
 math.simplex = love.math.simplexNoise or math.noise
 math.perlin = math.noise
@@ -97,7 +96,6 @@ function switch(param, case_table) return (case_table[param] or case_table.defau
 function bind(self, callback) return function(...) callback(self, ...) end end
 
 local checktype_str = "bad argument #%d to '%s' (%s expected, got %s)"
-
 function checktype(level, value, arg, functionName, expectedType)
 	if type(value) ~= expectedType then
 		error(checktype_str:format(arg, functionName, expectedType, type(value)), level + 1)
@@ -113,7 +111,8 @@ function string:ext() return self:match(regex_ext) or self end
 
 function string:withoutExt() return self:match(regex_withoutExt) or self end
 
-function string:capitalize() return self:sub(1, 1):upper() .. self:sub(2) end
+local function tc(first, rest) return first:upper() .. rest end
+function string:title() return self:gsub("(%a)([%w_']*)", tc) end
 
 function string:fileName(parts)
 	parts = self:split(package.config:sub(1, 1), parts)
@@ -130,19 +129,11 @@ function string:isSpace(pos)
 	pos = self:byte(pos); return pos and (pos > 8 and pos < 14 or pos == 32)
 end
 
-function string:ltrim()
-	local i, r = #self, 1
-	while r <= i and self:isSpace(r) do r = r + 1 end
-	return self:sub(r)
-end
+function string:ltrim() return self:match("^%s*(.*)") end
 
-function string:rtrim()
-	local r = #self - 1
-	while r > 0 and self:isSpace(r) do r = r - 1 end
-	return self:sub(1, r)
-end
+function string:rtrim() return self:match("(.-)%s*$") end
 
-function string:trim() return self:ltrim():rtrim() end
+function string:trim() return self:match("^%s*(.-)%s*$") end
 
 function table.merge(a, b) for i, v in pairs(b) do a[i] = v end end
 
@@ -165,33 +156,31 @@ function table.splice(list, start, count, ...)
 	local n, removed = #list + 1, {...};
 	local c = #removed; start = (start < 1 and n + start or start) + c;
 	for i = c, 1, -1 do table_insert(list, start, table_remove(removed, i)) end
-	for i = 1, math_min(count or 0, n - start) do
-		table_insert(removed, table_remove(list, start))
-	end
+	for i = 1, math_min(count or 0, n - start) do table_insert(removed, table_remove(list, start)) end
 	return removed
 end
 
 local pi = math.pi
 function math.fastsin(v)
-	v = (v / pi) % 2
-	return v <= 1 and -4 * v * (v - 1) or 4 * (v - 1) * (v - 2)
-end
-
-function math.fastcos(v)
-	v = (v / pi + .5) % 2
-	return v <= 1 and -4 * v * (v - 1) or 4 * (v - 1) * (v - 2)
-end
-
-function math.aprsin(v)
 	v = ((v / pi + 1) % 2) - 1
 	return v > 0 and v * (3.1 + v * (0.5 + v * (-7.2 + v * 3.6)))
 		or v * (3.1 - v * (0.5 + v * (7.2 + v * 3.6)))
 end
 
-function math.aprcos(v)
+function math.fastcos(v)
 	v = ((v / pi + 1.5) % 2) - 1
 	return v > 0 and v * (3.1 + v * (0.5 + v * (-7.2 + v * 3.6)))
 		or v * (3.1 - v * (0.5 + v * (7.2 + v * 3.6)))
+end
+
+function math.fastsin2(v)
+	v = (v / pi) % 2
+	return v <= 1 and -4 * v * (v - 1) or 4 * (v - 1) * (v - 2)
+end
+
+function math.fastcos2(v)
+	v = (v / pi + .5) % 2
+	return v <= 1 and -4 * v * (v - 1) or 4 * (v - 1) * (v - 2)
 end
 
 function math.odd(x) return x % 2 >= 1 end -- 1, 3, etc
@@ -223,8 +212,6 @@ end
 
 -- LOVE2D EXTRA FUNCTIONS
 
--- Gets the current device
----@return string -- The current device. (`Desktop` or `Mobile`)
 function love.system.getDevice()
 	local os = love.system.getOS()
 	if os == "Android" or os == "iOS" then
@@ -254,7 +241,7 @@ else
 	love.window.getMaxDesktopDimensions = love.window.getDesktopDimensions
 end
 
-if --[[not love.markDeprecated actually this is better and]] debug then
+if false then
 	-- this is stupid
 	local __markDeprecated__, __Sl__, __none__ = "markDeprecated", "Sl", ""
 	local __functionvariant__, __functionvariantin__ = "functionvariant", "function variant in"

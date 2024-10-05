@@ -17,9 +17,14 @@ function tryload(dir, file, ...)
 	end
 end
 
-local lib
-if OS == "Windows" and love.getVersion() == 12 then -- LOVE 11.5 broke here...
-	lib = tryload(..., "discord-rpc-win64", "discord-rpc-win32")
+local lib, legacy -- LOVE 11.5 does not like the latest one
+if OS == "Windows" then
+	legacy = love.getVersion() < 12
+	if legacy then
+		lib = tryload(..., "discord-rpc-win64-legacy", "discord-rpc-win32-legacy")
+	else
+		lib = tryload(..., "discord-rpc-win64")
+	end
 elseif OS == "Linux" then
 	lib = tryload(..., "libdiscord-rpc-linux")
 elseif OS == "OS X" then
@@ -28,11 +33,12 @@ else
 	lib = tryload(..., "discord-rpc", "libdiscord-rpc")
 end
 
+local __NULL__ = __NULL__ or function() end
 if not lib then
-	local __NULL__ = function() end
 	return setmetatable({}, {__index = function() return __NULL__ end})
 end
 
+if legacy then
 ffi.cdef [[
 typedef struct DiscordRichPresence {
     const char* state;   /* max 128 bytes */
@@ -59,12 +65,12 @@ typedef struct DiscordUser {
     const char* avatar;
 } DiscordUser;
 
-typedef void (*readyPtr)(const DiscordUser* request);
+typedef void (*readyPtr)(const DiscordUser* user);
 typedef void (*disconnectedPtr)(int errorCode, const char* message);
 typedef void (*erroredPtr)(int errorCode, const char* message);
 typedef void (*joinGamePtr)(const char* joinSecret);
 typedef void (*spectateGamePtr)(const char* spectateSecret);
-typedef void (*joinRequestPtr)(const DiscordUser* request);
+typedef void (*joinRequestPtr)(const DiscordUser* user);
 
 typedef struct DiscordEventHandlers {
     readyPtr ready;
@@ -82,6 +88,8 @@ void Discord_Initialize(const char* applicationId,
 
 void Discord_Shutdown(void);
 
+void Discord_UpdateConnection(void);
+
 void Discord_RunCallbacks(void);
 
 void Discord_UpdatePresence(const DiscordRichPresence* presence);
@@ -92,15 +100,83 @@ void Discord_Respond(const char* userid, int reply);
 
 void Discord_UpdateHandlers(DiscordEventHandlers* handlers);
 ]]
+else
+ffi.cdef [[
+typedef struct DiscordRichPresence {
+    const char* state;   /* max 128 bytes */
+    const char* details; /* max 128 bytes */
+    int64_t startTimestamp;
+    int64_t endTimestamp;
+    const char* largeImageKey;  /* max 32 bytes */
+    const char* largeImageText; /* max 128 bytes */
+    const char* smallImageKey;  /* max 32 bytes */
+    const char* smallImageText; /* max 128 bytes */
+    const char* partyId;        /* max 128 bytes */
+    int partySize;
+    int partyMax;
+    const char* matchSecret;    /* max 128 bytes */
+    const char* joinSecret;     /* max 128 bytes */
+    const char* spectateSecret; /* max 128 bytes */
+    int8_t instance;
+} DiscordRichPresence;
 
-local discordRPC = {} -- module table
+typedef struct DiscordUser {
+    const char* userId;
+    const char* username;
+    const char* discriminator;
+    const char* globalName;
+    const char* avatar;
+} DiscordUser;
+
+typedef void (*readyPtr)(const DiscordUser* user);
+typedef void (*disconnectedPtr)(int errorCode, const char* message);
+typedef void (*erroredPtr)(int errorCode, const char* message);
+typedef void (*joinGamePtr)(const char* joinSecret);
+typedef void (*spectateGamePtr)(const char* spectateSecret);
+typedef void (*joinRequestPtr)(const DiscordUser* user);
+typedef void (*debugPtr)(char isOut, const char* opcodeName, const char* message, uint32_t messageLength);
+typedef void (*invitedPtr)(int8_t type, const DiscordUser* user, const DiscordRichPresence* activity, const char* sessionId, const char* channelId, const char* messageId);
+
+typedef struct DiscordEventHandlers {
+    readyPtr ready;
+    disconnectedPtr disconnected;
+    erroredPtr errored;
+    debugPtr debug;
+    joinGamePtr joinGame;
+    spectateGamePtr spectateGame;
+    joinRequestPtr joinRequest;
+    invitedPtr invited;
+} DiscordEventHandlers;
+
+void Discord_Initialize(const char* applicationId,
+                        DiscordEventHandlers* handlers,
+                        int autoRegister,
+                        const char* optionalSteamId);
+
+void Discord_Shutdown(void);
+
+void Discord_UpdateConnection(void);
+
+void Discord_RunCallbacks(void);
+
+void Discord_UpdatePresence(const DiscordRichPresence* presence);
+
+void Discord_ClearPresence(void);
+
+void Discord_Respond(const char* userid, int reply);
+
+void Discord_UpdateHandlers(DiscordEventHandlers* handlers);
+]]
+end
+
+local discordRPC = {legacy = legacy} -- module table
 
 -- proxy to detect garbage collection of the module
 discordRPC.gcDummy = newproxy(true)
 
 local function unpackDiscordUser(request)
 	return ffi.string(request.userId), ffi.string(request.username),
-		ffi.string(request.discriminator), ffi.string(request.avatar)
+		ffi.string(request.discriminator), ffi.string(request.avatar), legacy and ffi.string(request.username) or ffi.string(request.globalName)
 end
 
 -- callback proxies
@@ -207,6 +283,15 @@ end
 -- "Then you'll need to manually turn off JIT-compilation with jit.off() for
 -- the surrounding Lua function that invokes such a message polling function."
 jit.off(discordRPC.runCallbacks)
+
+if pcall(function() local _ = lib.Discord_UpdateConnection end) then
+	discordRPC.DISCORD_DISABLE_IO_THREAD = true
+	function discordRPC.updateConnection()
+		lib.Discord_UpdateConnection()
+	end
+
+	jit.off(discordRPC.updateConnection)
+end
 
 function discordRPC.updatePresence(presence)
 	local func = "discordRPC.updatePresence"
