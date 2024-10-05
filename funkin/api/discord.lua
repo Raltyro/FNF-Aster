@@ -2,33 +2,52 @@ local discordRPC = require("lib.discordRPC")
 local Signal = require("funkin.utils.signal")
 
 local Discord = {}
-Discord.CLIENT_ID = "1289598322767691776"
+Discord.DEFAULT_ID = "1289598322767691776"
+Discord.CLIENT_ID = Discord.DEFAULT_ID
+
+Discord.active = false
+Discord.connected = false
+Discord.defaultPresence = {
+	details = "Initial",
+	state = nil,
+	largeImageKey = "icon",
+	largeImageText = "Funkin' Aster",
+	smallImageKey = "",
+	smallImageText = "",
+	startTimestamp = 0,
+	timestamp = 0
+}
 
 -- since the callbacks are unsafe, not protected, we have to wrap it
 local pendingDispatches, table_insert = {}, table.insert
-local CALLBACKS = {
-	READY = 0,
-	DISCONNECTED = 1,
-	ERROR = 2
-}
-local function dispatchSafe(callback, ...)
-	table_insert(pendingDispatches, {callback, ...})
-end
+local function wrappedDispatchSafe(callback) return function(...) table_insert(pendingDispatches, {callback, ...}) end end
 
 function Discord.init(CLIENT_ID)
-	discordRPC.ready = function(...) dispatchSafe(CALLBACKS.READY, ...) end
-	discordRPC.disconnected = function(...) dispatchSafe(CALLBACKS.DISCONNECTED, ...) end
-	discordRPC.errored = function(...) dispatchSafe(CALLBACKS.ERROR, ...) end
+	discordRPC.ready = wrappedDispatchSafe("ready")
+	discordRPC.disconnected = wrappedDispatchSafe("disconnected")
+	discordRPC.errored = wrappedDispatchSafe("error")
 
 	Discord.onReady = Signal()
 	Discord.onDisconnected = Signal()
 	Discord.onError = Signal()
+	Discord.presence = table.clone(Discord.defaultPresence)
 
-	discordRPC.initialize(CLIENT_ID or Discord.CLIENT_ID, true)
+	if CLIENT_ID then Discord.CLIENT_ID = CLIENT_ID end
+	discordRPC.initialize(Discord.CLIENT_ID, true)
+
+	Discord.active = true
+end
+
+function Discord.shutdown()
+	Discord.active = false
+	Discord.connected = false
+	discordRPC.shutdown()
 end
 
 local nextUpdate = 0
 function Discord.update()
+	if not Discord.active then return end
+
 	local time = os.time()
 	if time > nextUpdate then
 		nextUpdate = time + 2
@@ -40,21 +59,32 @@ function Discord.update()
 
 		local i = #pendingDispatches
 		while i ~= 0 do
-			local callback = table.remove(pendingDispatches[i], 1)
-			if callback == CALLBACKS.READY then callback = Discord.readyCallback
-			elseif callback == CALLBACKS.DISCONNECTED then callback = Discord.disconnectedCallback
-			elseif callback == CALLBACKS.ERROR then callback = Discord.errorCallback end
-
-			callback(unpack(pendingDispatches[i]))
-			pendingDispatches[i] = nil
+			pendingDispatches[i] = Discord[table.remove(pendingDispatches[i], 1) .. "Callback"](unpack(pendingDispatches[i]))
 			i = #pendingDispatches
 		end
 	end
 end
 
+function Discord.setPresence(presence)
+	if presence then Discord.presence = table.merge(presence) end
+	discordRPC.updatePresence(Discord.presence)
+end
+
+function Discord.resetPresence()
+	Discord.presence = table.clone(Discord.defaultPresence)
+	discordRPC.updatePresence(Discord.presence)
+end
+
+function Discord.clearPresence()
+	Discord.presence = {
+		details = ""
+	}
+	discordRPC.clearPresence(presence)
+end
+
 function Discord.readyCallback(userId, username, discriminator, avatar, globalName)
 	discriminator = tonumber(discriminator)
-	Discord.user = {
+	Discord.connected, Discord.user = true, {
 		userId = userId,
 		username = username,
 		discriminator = discriminator,
@@ -70,18 +100,25 @@ function Discord.readyCallback(userId, username, discriminator, avatar, globalNa
 	end
 
 	Discord.onReady:dispatch()
+
+	Discord.setPresence()
 end
 
 function Discord.disconnectedCallback(errorCode, message)
 	print('[DISCORD] Client has disconnected! (' .. errorCode .. ') "' .. message .. '"')
 
+	Discord.connected = false
 	Discord.onDisconnected:dispatch()
 end
 
 function Discord.errorCallback(errorCode, message)
 	print('[DISCORD] Client has received an error! (' .. errorCode .. ') "' .. message .. '"')
 
+	Discord.active = false
+	Discord.connected = false
 	Discord.onError:dispatch()
+
+	discordRPC.shutdown()
 end
 
 return Discord
