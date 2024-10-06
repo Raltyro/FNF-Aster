@@ -102,6 +102,11 @@ void Discord_UpdateHandlers(DiscordEventHandlers* handlers);
 ]]
 else
 ffi.cdef [[
+typedef struct DiscordButton {
+    const char* label;
+    const char* url;
+} DiscordButton;
+
 typedef struct DiscordRichPresence {
     const char* state;   /* max 128 bytes */
     const char* details; /* max 128 bytes */
@@ -114,10 +119,12 @@ typedef struct DiscordRichPresence {
     const char* partyId;        /* max 128 bytes */
     int partySize;
     int partyMax;
+    int partyPrivacy;
     const char* matchSecret;    /* max 128 bytes */
     const char* joinSecret;     /* max 128 bytes */
     const char* spectateSecret; /* max 128 bytes */
     int8_t instance;
+    const DiscordButton* buttons;
 } DiscordRichPresence;
 
 typedef struct DiscordUser {

@@ -44,6 +44,7 @@ end
 
 love.update = funkin.update
 love.draw = funkin.draw
+love.focus = funkin.focus
 love.keypressed = funkin.keypressed
 love.keyreleased = funkin.keyreleased
 love.touchpressed = funkin.touchpressed
@@ -53,7 +54,6 @@ love.joystickpressed = funkin.joystickpressed
 love.joystickreleased = funkin.joystickreleased
 love.gamepadpressed = funkin.gamepadpressed
 love.gamepadreleased = funkin.gamepadreleased
-
 
 function love.quit()
 	funkin.quit()

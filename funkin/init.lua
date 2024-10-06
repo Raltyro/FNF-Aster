@@ -1,20 +1,36 @@
 require("funkin.loadmodules")
 
-local funkin = {}
+funkin = {}
 
 local Discord = require("funkin.api.discord")
+local SoundManager = require("funkin.managers.soundmanager")
 
-function funkin.init()
+function funkin.init(initialScene)
 	Discord.init()
 
+	love.autoPause = true
 end
 
 function funkin.update(dt)
+	funkin.elapsed = dt
+
 	Discord.update()
+	if love.window.hasFocus() or not love.autoPause then
+		SoundManager.update()
+	end
 end
 
 function funkin.draw()
 
+end
+
+function funkin.focus(f)
+	if not love.autoPause then return end
+	if f then
+		SoundManager.resume()
+	else
+		SoundManager.pause()
+	end
 end
 
 function funkin.keypressed(t, b, s, r)

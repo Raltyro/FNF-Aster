@@ -5,6 +5,9 @@ local Sound = Basic:extend("Sound", ...)
 function Sound:new(x, y)
 	Sound.super.new(self)
 	self:revive(x, y)
+	self.persist = false
+
+	if SoundManager then SoundManager.add(self) end
 end
 
 function Sound:setPosition(x, y)
@@ -25,7 +28,6 @@ function Sound:revive(x, y)
 	self._volume = 1
 	self._pitch = 1
 	self._duration = 0
-	self._wasPlaying = nil
 	Sound.super.revive(self)
 end
 
@@ -60,16 +62,12 @@ function Sound:cleanup()
 	self._paused = true
 	self._wasFinished = false
 	self._source = nil
+	self._attachedGroup = nil
 end
 
 function Sound:destroy()
 	Sound.super.destroy(self)
 	self:cleanup()
-end
-
-function Sound:kill()
-	Sound.super.kill(self)
-	self:reset(self.autoDestroy)
 end
 
 function Sound:load(asset, autoDestroy, onComplete)
@@ -95,9 +93,7 @@ end
 function Sound:play(volume, looped, pitch, restart)
 	if not self.active or not self.loaded then return self end
 
-	self.volume = volume or self.volume
-	self.looped = looped or self.looped
-	self.pitch = pitch or self.pitch
+	self:adjust(volume, looped, pitch)
 
 	if restart then
 		pcall(self._source.stop, self._source)
@@ -109,6 +105,13 @@ function Sound:play(volume, looped, pitch, restart)
 	self._wasFinished = false
 	pcall(self._source.play, self._source)
 	return self
+end
+
+function Sound:restart(...)
+	if not self.active or not self.loaded then return self end
+
+	pcall(self._source.stop, self._source)
+	return self:play(...)
 end
 
 function Sound:pause()
@@ -123,36 +126,30 @@ function Sound:stop()
 	return self
 end
 
-function Sound:update(dt)
+function Sound:adjust(volume, looped, pitch)
+	self.volume = volume or self.volume
+	self.looped = looped or self.looped
+	self.pitch = pitch or self.pitch
+
+	self._attachedGroup = self:getActualGroup()
+end
+
+function Sound:update()
 	local isFinished = self.finished
 	if isFinished and not self._wasFinished then
 		local onComplete = self.onComplete
 		if self.autoDestroy then
-			self:kill()
+			self:reset(self.autoDestroy)
 		else
 			self:stop()
 		end
 
 		if onComplete then onComplete() end
+	elseif self._attachedGroup ~= self:getActualGroup() then
+		self:adjust()
 	end
 
 	self._wasFinished = isFinished
-end
-
-function Sound:onFocus(focus)
-	if love.autoPause and self.active and not self.finished then
-		if focus then
-			if self._wasPlaying ~= nil and self._wasPlaying then
-				self._wasPlaying = nil
-				self:play()
-			end
-		else
-			self._wasPlaying = self.playing
-			if self._wasPlaying then
-				self:pause()
-			end
-		end
-	end
 end
 
 function Sound:getActualGroup()

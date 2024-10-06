@@ -27,6 +27,7 @@ function Conductor:new()
 	self.onStepHit = Signal()
 
 	self.songPosition = 0
+	self.offset = 0
 
 	self.oldMeasure = 0
 	self.oldBeat = 0
@@ -98,16 +99,30 @@ function Conductor:get_stepsPerMeasure()
 	return self.timeSignatureNumerator / self.timeSignatureDenominator * 16
 end
 
-function Conductor:update(songPosition, forceDispatch)
+function Conductor:update(sound, forceDispatch, applyOffsets)
 	if not self.active or self.destroyed then return end
-	if songPosition == nil then songPosition = SoundManager.music.time end
-	if songPosition == self.songPosition then return end
-	
+
+	local songPosition
+	if sound == nil then
+		songPosition = SoundManager.music.time + self.offset
+		if songPosition == self.songPosition then return end
+	elseif type(sound) == 'number' then
+		songPosition = sound + self.offset
+		if songPosition == self.songPosition then return end
+	else
+		songPosition = sound.time + self.offset
+		if songPosition == self.songPosition then
+			local add = (funkin.deltatime or 0) * sound:getActualPitch()
+			if sound.playing and add > 0 then songPosition = songPosition + add
+			else return end
+		end
+	end
+
 	self.songPosition = songPosition
 	self.oldMeasure = self.currentMeasure
 	self.oldBeat = self.currentBeat
 	self.oldStep = self.currentStep
-	
+
 	self.currentTimeChangeIdx = self:getTimeInChangeIdx(songPosition, self.currentTimeChangeIdx)
 	local timeChange = self.timeChanges[self.currentTimeChangeIdx]
 	if timeChange == nil then

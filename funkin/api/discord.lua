@@ -44,6 +44,11 @@ function Discord.shutdown()
 	discordRPC.shutdown()
 end
 
+function Discord.restart()
+	Discord.shutdown()
+	Discord.init()
+end
+
 local nextUpdate = 0
 function Discord.update()
 	if not Discord.active then return end
@@ -66,7 +71,7 @@ function Discord.update()
 end
 
 function Discord.setPresence(presence)
-	if presence then Discord.presence = table.merge(presence) end
+	if presence then table.merge(Discord.presence, presence) end
 	discordRPC.updatePresence(Discord.presence)
 end
 
@@ -79,7 +84,7 @@ function Discord.clearPresence()
 	Discord.presence = {
 		details = ""
 	}
-	discordRPC.clearPresence(presence)
+	discordRPC.clearPresence()
 end
 
 function Discord.readyCallback(userId, username, discriminator, avatar, globalName)
@@ -118,7 +123,7 @@ function Discord.errorCallback(errorCode, message)
 	Discord.connected = false
 	Discord.onError:dispatch()
 
-	discordRPC.shutdown()
+	discordRPC.restart()
 end
 
 return Discord

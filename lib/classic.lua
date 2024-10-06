@@ -66,6 +66,7 @@ function Classic:exclude(...)
 end
 
 function Classic:is(T)
+	if type(T) == 'string' then return self.__class == T end
 	local mt = self
 	repeat
 		mt = getmetatable(mt)
