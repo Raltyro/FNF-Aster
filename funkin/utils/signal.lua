@@ -1,4 +1,4 @@
-local Signal = Classic:extend("Signal", ...)
+local Signal = Classic:extend("Signal")
 
 function Signal:new()
 	self.handlers = {}

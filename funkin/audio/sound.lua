@@ -1,6 +1,6 @@
 local SoundManager = require("funkin.managers.soundmanager")
 
-local Sound = Basic:extend("Sound", ...)
+local Sound = Basic:extend("Sound")
 
 function Sound:new(x, y)
 	Sound.super.new(self)
@@ -136,23 +136,21 @@ function Sound:adjust(volume, looped, pitch)
 end
 
 function Sound:update()
-	if self.playing then
-		local isFinished = self.finished
-		if isFinished and not self._wasFinished then
-			local onComplete = self.onComplete
-			if self.autoDestroy then
-				self:reset(self.autoDestroy)
-			else
-				self:stop()
-			end
-
-			if onComplete then onComplete() end
-		elseif self._attachedGroup ~= self:getActualGroup() then
-			self:adjust()
+	local isFinished = self.finished
+	if isFinished and not self._wasFinished then
+		local onComplete = self.onComplete
+		if self.autoDestroy then
+			self:destroy()
+		else
+			self:stop()
 		end
 
-		self._wasFinished = isFinished
+		if onComplete then onComplete() end
+	elseif self._attachedGroup ~= self:getActualGroup() then
+		self:adjust()
 	end
+
+	self._wasFinished = isFinished
 end
 
 function Sound:getActualGroup()

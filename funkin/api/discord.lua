@@ -53,7 +53,7 @@ local nextUpdate = 0
 function Discord.update()
 	if not Discord.active then return end
 
-	local time = os.time()
+	local time = love.timer.getTime()
 	if time > nextUpdate then
 		nextUpdate = time + 2
 

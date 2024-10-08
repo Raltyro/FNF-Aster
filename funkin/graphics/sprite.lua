@@ -1,3 +1,3 @@
-local Sprite = Actor:extend("Sprite", ...)
+local Sprite = Actor:extend("Sprite")
 
 return Sprite

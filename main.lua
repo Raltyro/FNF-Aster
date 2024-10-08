@@ -2,6 +2,7 @@ io.stdout:setvbuf("no")
 
 require("run")
 require("lib.override")
+require("lib.prettyprint")
 
 native = require("lib.native")
 

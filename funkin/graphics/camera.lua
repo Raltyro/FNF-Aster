@@ -1,3 +1,3 @@
-local Camera = Actor:extend("Camera", ...)
+local Camera = Actor:extend("Camera")
 
 return Camera

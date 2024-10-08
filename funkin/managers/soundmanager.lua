@@ -15,7 +15,7 @@ end
 
 function SoundManager.load(asset, autoDestroy, ...)
 	local sound
-	for i, member in ipairs(SoundManager.sounds) do
+	for i, member in pairs(SoundManager.sounds) do
 		if member.destroyed then
 			sound = member
 			table.remove(SoundManager.sounds, i)
@@ -48,7 +48,7 @@ function SoundManager.playMusic(asset, volume, looped, ...)
 end
 
 function SoundManager.pause()
-	for _, sound in ipairs(SoundManager.sounds) do
+	for _, sound in pairs(SoundManager.sounds) do
 		if sound.playing then
 			table.insert(SoundManager._pausedSources, sound._source)
 		end
@@ -62,7 +62,7 @@ function SoundManager.resume()
 end
 
 function SoundManager.update()
-	for _, sound in ipairs(SoundManager.sounds) do
+	for _, sound in pairs(SoundManager.sounds) do
 		if sound.active then
 			sound:update()
 		end
@@ -92,7 +92,7 @@ return setmetatable(SoundManager, {
 		if properties[i] then
 			rawset(t, _ .. i, v)
 			if t.sounds then
-				for _, sound in ipairs(t.sounds) do sound:adjust() end
+				for _, sound in pairs(t.sounds) do sound:adjust() end
 			end
 			return
 		end

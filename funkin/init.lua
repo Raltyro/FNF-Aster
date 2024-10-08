@@ -4,13 +4,14 @@ funkin = {}
 
 local Discord = require("funkin.api.discord")
 local SoundManager = require("funkin.managers.soundmanager")
-local Conductor = require("funkin.managers.conductor")
+local Conductor = require("funkin.objects.conductor")
 
 function funkin.init(initialScene)
 	Discord.init()
 
-	local song, suffix, player, opponent = "hatena", "", "", ""--"darnell", "-bf", "bf", "darnell"
-	Conductor.DEFAULT_BPM = 150
+	local song, suffix, player, opponent = "darnell", "-bf", "bf", "darnell"
+	Conductor.instance:setBPM(155)
+	print(song)
 
 	Discord.setPresence{
 		state = song:title(),
@@ -39,7 +40,7 @@ function funkin.init(initialScene)
 
 	local clav1Data, clav2Data = love.sound.newSoundData("assets/sounds/clav1.ogg"), love.sound.newSoundData("assets/sounds/clav2.ogg")
 	Conductor.instance.onBeatHit:add(function()
-		print(Conductor.instance.currentBeat)
+		print(Conductor.instance.currentBeat, Conductor.instance.currentMeasure)
 		if Conductor.instance.currentMeasure ~= Conductor.instance.oldMeasure then
 			SoundManager.play(clav1Data)
 		else

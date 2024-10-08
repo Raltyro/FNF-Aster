@@ -1,7 +1,16 @@
 local Signal = require("funkin.utils.signal")
 
-local Conductor = Basic:extend("Conductor", ...)
+local Conductor = Basic:extend("Conductor")
 Conductor.DEFAULT_BPM = 100
+
+--[[ timeChange {
+	time = songPosition,
+	bpm = bpm or Conductor.DEFAULT_BPM,
+	numerator = 4,
+	denominator = 4,
+
+	beatTime = ? -- automatically calculated
+}]]
 
 Conductor._instance = nil
 function Conductor.get_instance()
@@ -45,6 +54,10 @@ function Conductor:new()
 	self.currentTimeChangeIdx = 0
 end
 
+function Conductor:setBPM(bpm)
+	self.timeChanges = {{bpm = bpm, time = 0}}
+end
+
 ---The time change that current song position are in.
 function Conductor:get_currentTimeChange()
 	return self.timeChanges[self.currentTimeChangeIdx]
@@ -64,7 +77,7 @@ end
 
 ---Duration of a measure in seconds. Calculated based on bpm.
 function Conductor:get_measureLengthM()
-	return self.beatLength * self.timeSignatureNumerator
+	return self.beatLength * self.numerator
 end
 
 ---Duration of a beat (quarter note) in seconds. Calculated based on bpm.
@@ -74,37 +87,44 @@ end
 
 ---Duration of a step (sixtennth note) in seconds. Calculated based on bpm.
 function Conductor:get_stepLength()
-	return self.beatLength / self.timeSignatureNumerator
+	return self.beatLength / self.numerator
 end
 
 ---The numerator for the current time signature (the `3` in `3/4`).
-function Conductor:get_timeSignatureNumerator()
+function Conductor:get_numerator()
 	local timeChange = self:get_currentTimeChange()
-	return timeChange and timeChange.timeSignatureNumerator or 4
+	return timeChange and timeChange.numerator or 4
 end
 
 ---The denominator for the current time signature (the `4` in `3/4`).
-function Conductor:get_timeSignatureDenominator()
+function Conductor:get_denominator()
 	local timeChange = self:get_currentTimeChange()
-	return timeChange and timeChange.timeSignatureDenominator or 4
+	return timeChange and timeChange.denominator or 4
 end
 
 ---The number of beats in a measure. May be fractional depending on the time signature.
 function Conductor:get_beatsPerMeasure()
-	return self.timeSignatureNumerator / self.timeSignatureDenominator * 4
+	return self.numerator / self.denominator * 4
 end
 
 ---The number of steps in a measure.
 function Conductor:get_stepsPerMeasure()
-	return self.timeSignatureNumerator / self.timeSignatureDenominator * 16
+	return self.numerator / self.denominator * 16
 end
 
 function Conductor:update(sound, forceDispatch, applyOffsets)
 	if not self.active or self.destroyed then return end
 	if sound == nil then sound = SoundManager.music end
 
-	local songPosition = sound == nil and SoundManager.music or (type(sound) == 'number' and sound or sound.time) + self.offset
-	if songPosition == self.songPosition then return end
+	local songPosition = sound == nil and SoundManager.music or (type(sound) == 'number' and sound or sound.time) + (applyOffsets and self.offset or 0)
+	if songPosition == self.songPosition then
+		if forceDispatch then
+			self.onStepHit:dispatch()
+			self.onBeatHit:dispatch()
+			self.onMeasureHit:dispatch()
+		end
+		return
+	end
 
 	self.songPosition = songPosition
 	self.oldMeasure = self.currentMeasure
@@ -116,11 +136,11 @@ function Conductor:update(sound, forceDispatch, applyOffsets)
 	if timeChange == nil then
 		self.currentBeatTime = songPosition / self:get_beatLength()
 	else
-		self.currentBeatTime = timeChange.beatTime + (songPosition - timeChange.timeStamp) / self:get_beatLength()
+		self.currentBeatTime = (timeChange.beatTime or 0) + (songPosition - timeChange.time) / self:get_beatLength()
 	end
 	self.currentBeat = math.floor(self.currentBeatTime)
 
-	self.currentStepTime = self.currentBeatTime * self:get_timeSignatureNumerator()
+	self.currentStepTime = self.currentBeatTime * self:get_numerator()
 	self.currentStep = math.floor(self.currentStepTime)
 	self.currentMeasureTime = self.currentBeatTime / self:get_beatsPerMeasure() -- fix this
 	self.currentMeasure = math.floor(self.currentMeasureTime)

@@ -1,4 +1,4 @@
-local Basic = Classic:extend("Basic", ...)
+local Basic = Classic:extend("Basic")
 
 function Basic:new()
 	self.active = true

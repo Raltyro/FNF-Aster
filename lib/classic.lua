@@ -34,7 +34,7 @@ function Classic:__newindex(k, v)
 	else return setter(v) end
 end
 
-function Classic:extend(type, path)
+function Classic:extend(type)
 	local cls = {}
 
 	for k, v in pairs(self) do
@@ -42,16 +42,21 @@ function Classic:extend(type, path)
 	end
 
 	cls.__class = type or "Unknown(" .. self.__class .. ")"
-	cls.__path = path
 	cls.super = self
 	setmetatable(cls, self)
+
+	if debug then
+		cls.__path = debug.getinfo(2, "S").short_src:gsub('/', '.')
+		cls.__path = cls.__path:match("(.+)%..+$") or cls.__path
+		if cls.__path:sub(-#type) == type:lower() then cls.__path = cls.__path:sub(1, -#type - 2) end
+	end
 
 	return cls
 end
 
 function Classic:implement(...)
-	for _, cls in pairs({...}) do
-		for k, v in pairs(cls) do
+	for i = 1, select("#", ...) do
+		for k, v in pairs(select(i, ...)) do
 			if self[k] == nil and type(v) == "function" and k ~= "new" and k:sub(1, 2) ~= "__" then
 				self[k] = v
 			end
@@ -75,7 +80,7 @@ function Classic:is(T)
 	return false
 end
 
-function Classic:__tostring() return (path and path .. "." or '') .. self.__class end
+function Classic:__tostring() return self.__class end
 
 function Classic:__call(...)
 	local obj = setmetatable({}, self)

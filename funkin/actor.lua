@@ -1,4 +1,4 @@
-local Actor = Basic:extend("Actor", ...)
+local Actor = Basic:extend("Actor")
 
 function Actor:new(x, y, z)
 	Actor.super.new(self)
