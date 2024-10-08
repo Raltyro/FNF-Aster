@@ -20,7 +20,7 @@ end
 function Conductor.reset() Conductor.instance = Conductor() end
 
 function Conductor:new()
-	Basic.super.new(self)
+	Conductor.super.new(self)
 
 	self.onMeasureHit = Signal()
 	self.onBeatHit = Signal()
@@ -62,19 +62,19 @@ function Conductor:get_startingBPM()
 	return timeChange and timeChange.bpm or Conductor.DEFAULT_BPM
 end
 
----Duration of a measure in milliseconds. Calculated based on bpm.
-function Conductor:get_measureLengthMs()
-	return self.beatLengthMs * self.timeSignatureNumerator
+---Duration of a measure in seconds. Calculated based on bpm.
+function Conductor:get_measureLengthM()
+	return self.beatLength * self.timeSignatureNumerator
 end
 
----Duration of a beat (quarter note) in milliseconds. Calculated based on bpm.
-function Conductor:get_beatLengthMs()
+---Duration of a beat (quarter note) in seconds. Calculated based on bpm.
+function Conductor:get_beatLength()
 	return 60 / self.bpm
 end
 
----Duration of a step (sixtennth note) in milliseconds. Calculated based on bpm.
-function Conductor:get_stepLengthMs()
-	return self.beatLengthMs / self.timeSignatureNumerator
+---Duration of a step (sixtennth note) in seconds. Calculated based on bpm.
+function Conductor:get_stepLength()
+	return self.beatLength / self.timeSignatureNumerator
 end
 
 ---The numerator for the current time signature (the `3` in `3/4`).
@@ -101,22 +101,10 @@ end
 
 function Conductor:update(sound, forceDispatch, applyOffsets)
 	if not self.active or self.destroyed then return end
+	if sound == nil then sound = SoundManager.music end
 
-	local songPosition
-	if sound == nil then
-		songPosition = SoundManager.music.time + self.offset
-		if songPosition == self.songPosition then return end
-	elseif type(sound) == 'number' then
-		songPosition = sound + self.offset
-		if songPosition == self.songPosition then return end
-	else
-		songPosition = sound.time + self.offset
-		if songPosition == self.songPosition then
-			local add = (funkin.deltatime or 0) * sound:getActualPitch()
-			if sound.playing and add > 0 then songPosition = songPosition + add
-			else return end
-		end
-	end
+	local songPosition = sound == nil and SoundManager.music or (type(sound) == 'number' and sound or sound.time) + self.offset
+	if songPosition == self.songPosition then return end
 
 	self.songPosition = songPosition
 	self.oldMeasure = self.currentMeasure
@@ -126,19 +114,24 @@ function Conductor:update(sound, forceDispatch, applyOffsets)
 	self.currentTimeChangeIdx = self:getTimeInChangeIdx(songPosition, self.currentTimeChangeIdx)
 	local timeChange = self.timeChanges[self.currentTimeChangeIdx]
 	if timeChange == nil then
-		self.currentBeatTime = songPosition / self:get_beatLengthMs()
+		self.currentBeatTime = songPosition / self:get_beatLength()
 	else
-		self.currentBeatTime = timeChange.beatTime + (songPosition - timeChange.timeStamp) / self:get_beatLengthMs()
+		self.currentBeatTime = timeChange.beatTime + (songPosition - timeChange.timeStamp) / self:get_beatLength()
 	end
+	self.currentBeat = math.floor(self.currentBeatTime)
 
-	self.currentStepTime = self.currentBeatTime * self.get_timeSignatureNumerator()
+	self.currentStepTime = self.currentBeatTime * self:get_timeSignatureNumerator()
 	self.currentStep = math.floor(self.currentStepTime)
 	self.currentMeasureTime = self.currentBeatTime / self:get_beatsPerMeasure() -- fix this
 	self.currentMeasure = math.floor(self.currentMeasureTime)
 
-	if self.currentStep ~= self.oldStep or forceDispatch then onStepHit:dispatch() end
-	if self.currentBeat ~= self.oldBeat or forceDispatch then onBeatHit:dispatch() end
-	if self.currentMeasure ~= self.oldMeasure or forceDispatch then onMeasureHit:dispatch() end
+	if self.currentStep ~= self.oldStep or forceDispatch then self.onStepHit:dispatch() end
+	if self.currentBeat ~= self.oldBeat or forceDispatch then self.onBeatHit:dispatch() end
+	if self.currentMeasure ~= self.oldMeasure or forceDispatch then self.onMeasureHit:dispatch() end
+end
+
+function Conductor:getTimeInChangeIdx()
+	return 1
 end
 
 function Conductor:mapTimeChanges(timeChanges)

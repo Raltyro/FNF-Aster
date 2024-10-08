@@ -2,7 +2,7 @@ local SoundManager, _ = {muted = false, volume = 1, pitch = 1}, '_'
 local properties = {}; for i, v in pairs(SoundManager) do properties[i], SoundManager[_ .. i], SoundManager[i] = true, v, nil end
 SoundManager.groups = {}
 SoundManager.sounds = {}
-SoundManager.pausedSounds = {}
+SoundManager._pausedSources = {}
 
 function SoundManager.add(sound)
 	if sound:is("SoundGroup") then
@@ -29,7 +29,7 @@ function SoundManager.load(asset, autoDestroy, ...)
 	return sound:load(asset, autoDestroy, ...)
 end
 
-function SoundManager:play(asset, volume, looped, autoDestroy, onComplete, ...)
+function SoundManager.play(asset, volume, looped, autoDestroy, onComplete, ...)
 	return SoundManager.load(asset, autoDestroy, onComplete):play(volume, looped, ...)
 end
 
@@ -49,27 +49,23 @@ end
 
 function SoundManager.pause()
 	for _, sound in ipairs(SoundManager.sounds) do
-		if not sound.destroyed and sound.active and sound.playing and not sound._wasPaused then
-			table.insert(SoundManager.pausedSounds, sound)
-			sound:pause()
-			sound._wasPaused = true
+		if sound.playing then
+			table.insert(SoundManager._pausedSources, sound._source)
 		end
 	end
+	love.audio.pause(SoundManager._pausedSources)
 end
 
 function SoundManager.resume()
-	for _, sound in ipairs(SoundManager.pausedSounds) do
-		if sound._wasPaused then
-			sound:play()
-			sound._wasPaused = nil
-		end
-	end
-	table.clear(SoundManager.pausedSounds)
+	love.audio.play(SoundManager._pausedSources)
+	table.clear(SoundManager._pausedSources)
 end
 
 function SoundManager.update()
 	for _, sound in ipairs(SoundManager.sounds) do
-		sound:update()
+		if sound.active then
+			sound:update()
+		end
 	end
 end
 

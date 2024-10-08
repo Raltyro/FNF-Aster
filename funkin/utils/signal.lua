@@ -27,7 +27,7 @@ function Signal:dispatch(...)
 end
 
 function Signal:add(listener, loops)
-	if listener ~= nil then self.handlers[listener] = loops end
+	if listener ~= nil then self.handlers[listener] = loops or 0 end
 end
 
 function Signal:remove(listener)

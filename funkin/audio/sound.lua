@@ -63,6 +63,7 @@ function Sound:cleanup()
 	self._wasFinished = false
 	self._source = nil
 	self._attachedGroup = nil
+	self._time = 0
 end
 
 function Sound:destroy()
@@ -122,7 +123,7 @@ end
 
 function Sound:stop()
 	self._paused = true
-	if self._source then pcall(self._source.stop, self._source) end
+	if self.loaded then pcall(self._source.stop, self._source) end
 	return self
 end
 
@@ -135,21 +136,23 @@ function Sound:adjust(volume, looped, pitch)
 end
 
 function Sound:update()
-	local isFinished = self.finished
-	if isFinished and not self._wasFinished then
-		local onComplete = self.onComplete
-		if self.autoDestroy then
-			self:reset(self.autoDestroy)
-		else
-			self:stop()
+	if self.playing then
+		local isFinished = self.finished
+		if isFinished and not self._wasFinished then
+			local onComplete = self.onComplete
+			if self.autoDestroy then
+				self:reset(self.autoDestroy)
+			else
+				self:stop()
+			end
+
+			if onComplete then onComplete() end
+		elseif self._attachedGroup ~= self:getActualGroup() then
+			self:adjust()
 		end
 
-		if onComplete then onComplete() end
-	elseif self._attachedGroup ~= self:getActualGroup() then
-		self:adjust()
+		self._wasFinished = isFinished
 	end
-
-	self._wasFinished = isFinished
 end
 
 function Sound:getActualGroup()
@@ -199,8 +202,19 @@ end
 function Sound:get_time()
 	if not self.loaded then return 0 end
 
+	-- this may look.. janky but the :tell() function or openal-soft internal can't keep up with refresh rates above 60
+	-- so this is the atleast best thing todo
 	local success, position = pcall(self._source.tell, self._source)
-	return success and position or 0
+	if not success then return 0
+	elseif position ~= self._time then
+		self._time = position
+		self._timelast = love.timer.getTime()
+		return position
+	elseif self.playing and self._timelast then
+		return position + math.min(love.timer.getTime() - self._timelast, 0.05) * self:getActualPitch()
+	else
+		return position
+	end
 end
 
 function Sound:set_time(position)
