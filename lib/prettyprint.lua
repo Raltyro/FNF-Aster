@@ -44,14 +44,14 @@ function stringifytable(t, space, depth)
 	return tostring(t) .. s .. (iter == 0 and '{}' or str .. newline .. indentation(space, depth - 1) .. '}')
 end
 
-local out, hash = io.write, '#'
+local out, hash = io.stdout, '#'
 if debug and debug.getinfo then
 	local l, c, m, zero, Sl = ':', '\x1b[', 'm', '0', "Sl"
 	function print(...)
 		local info = debug.getinfo(2, Sl)
-		out(c .. tostring(textcolor) .. m)
-		out(info.short_src .. l .. info.currentline .. l .. s)
-		out(c .. zero .. m)
+		out:write(c .. tostring(textcolor) .. m)
+		out:write(info.short_src .. l .. info.currentline .. l .. s)
+		out:write(c .. zero .. m)
 
 		local str, v = ''
 		for i = 1, select(hash, ...) do
@@ -62,7 +62,7 @@ if debug and debug.getinfo then
 			else str = str .. tostring(v) end
 		end
 
-		out(str .. '\n')
+		out:write(str .. '\n')
 	end
 else
 	function print(...)
@@ -75,6 +75,6 @@ else
 			else str = str .. tostring(v) end
 		end
 
-		out(str .. '\n')
+		out:write(str .. '\n')
 	end
 end

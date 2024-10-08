@@ -1,4 +1,4 @@
-io.stdout:setvbuf("no")
+io.stdout:setvbuf("no"); io.stdout:write('\n')
 
 require("run")
 require("lib.override")
