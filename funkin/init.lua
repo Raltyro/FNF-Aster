@@ -40,12 +40,12 @@ function funkin.init(initialScene)
 
 	local clav1Data, clav2Data = love.sound.newSoundData("assets/sounds/clav1.ogg"), love.sound.newSoundData("assets/sounds/clav2.ogg")
 	Conductor.instance.onBeatHit:add(function()
-		print(Conductor.instance.currentBeat, Conductor.instance.currentMeasure)
 		if Conductor.instance.currentMeasure ~= Conductor.instance.oldMeasure then
 			SoundManager.play(clav1Data)
 		else
 			SoundManager.play(clav2Data)
 		end
+		print(Conductor.instance.currentBeat, Conductor.instance.currentMeasure)
 	end)
 
 	--love.autoPause = true
