@@ -115,8 +115,9 @@ end
 function Conductor:update(sound, forceDispatch, applyOffsets)
 	if not self.active or self.destroyed then return end
 	if sound == nil then sound = SoundManager.music end
+	if applyOffsets == nil then applyOffsets = true end
 
-	local songPosition = sound == nil and SoundManager.music or (type(sound) == 'number' and sound or sound.time) + (applyOffsets and self.offset or 0)
+	local songPosition = sound == nil and SoundManager.music or (type(sound) == 'number' and sound or sound.time) - (applyOffsets and self.offset or 0)
 	if songPosition == self.songPosition then
 		if forceDispatch then
 			self.onStepHit:dispatch()
@@ -126,24 +127,18 @@ function Conductor:update(sound, forceDispatch, applyOffsets)
 		return
 	end
 
-	self.songPosition = songPosition
-	self.oldMeasure = self.currentMeasure
-	self.oldBeat = self.currentBeat
-	self.oldStep = self.currentStep
+	self.songPosition, self.oldMeasure, self.oldBeat, self.oldStep = songPosition, self.currentMeasure, self.currentBeat, self.currentStep
 
 	self.currentTimeChangeIdx = self:getTimeInChangeIdx(songPosition, self.currentTimeChangeIdx)
-	local timeChange = self.timeChanges[self.currentTimeChangeIdx]
+	local timeChange = self.currentTimeChange
 	if timeChange == nil then
 		self.currentBeatTime = songPosition / self:get_beatLength()
 	else
 		self.currentBeatTime = (timeChange.beatTime or 0) + (songPosition - timeChange.time) / self:get_beatLength()
 	end
-	self.currentBeat = math.floor(self.currentBeatTime)
-
 	self.currentStepTime = self.currentBeatTime * self:get_numerator()
-	self.currentStep = math.floor(self.currentStepTime)
 	self.currentMeasureTime = self.currentBeatTime / self:get_beatsPerMeasure() -- fix this
-	self.currentMeasure = math.floor(self.currentMeasureTime)
+	self.currentBeat, self.currentStep, self.currentMeasure = math.floor(self.currentBeatTime), math.floor(self.currentStepTime), math.floor(self.currentMeasureTime)
 
 	if self.currentStep ~= self.oldStep or forceDispatch then self.onStepHit:dispatch() end
 	if self.currentBeat ~= self.oldBeat or forceDispatch then self.onBeatHit:dispatch() end

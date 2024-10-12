@@ -1,5 +1,6 @@
-local SoundManager, _ = {muted = false, volume = 1, pitch = 1}, '_'
-local properties = {}; for i, v in pairs(SoundManager) do properties[i], SoundManager[_ .. i], SoundManager[i] = true, v, nil end
+local SoundManager = {muted = false, volume = 1, pitch = 1}
+local properties = {'muted', 'volume', 'pitch'}
+SoundManager.paused = false
 SoundManager.groups = {}
 SoundManager.sounds = {}
 SoundManager._pausedSources = {}
@@ -54,11 +55,15 @@ function SoundManager.pause()
 		end
 	end
 	love.audio.pause(SoundManager._pausedSources)
+
+	SoundManager.paused = true
 end
 
 function SoundManager.resume()
 	love.audio.play(SoundManager._pausedSources)
 	table.clear(SoundManager._pausedSources)
+
+	SoundManager.paused = false
 end
 
 function SoundManager.update()
@@ -87,6 +92,9 @@ function SoundManager.getActualVolume()
 	else return SoundManager.volume end
 end
 
+local _ = '_'
+for i, v in ipairs(properties) do properties[v], SoundManager[_ .. v], SoundManager[v] = true, SoundManager[v], nil end
+for i = 1, #properties do properties[i] = nil end
 return setmetatable(SoundManager, {
 	__newindex = function(t, i, v)
 		if properties[i] then

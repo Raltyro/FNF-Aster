@@ -20,11 +20,7 @@ local funkin = require("funkin")
 function love.load()
 	local isMobile = love.system.getDevice() == "Mobile"
 
-	if sourceMode then
-		love.window.setTitle(conf.title .. " (SOURCE)")
-	else
-		love.window.setTitle(conf.title)
-	end
+	love.window.setTitle(sourceMode and conf.title .. " (SOURCE)" or conf.title)
 	love.window.setMode(conf.width, conf.height, {
 		fullscreen = isMobile,
 		resizable = not isMobile,

@@ -1,6 +1,6 @@
-local srcfgcolor, srcbgcolor = 92, 0
-local warnfgcolor, warnbgcolor = 93, 0
-local timefgcolor, timebgcolor = 95, 0
+local srcfgcolor, srcbgcolor = 96, 0
+local warnfgcolor, warnbgcolor = 33, 0
+local timefgcolor, timebgcolor = 35, 0
 local maxdepth = 16
 
 local iswindows, ffi = love.system.getOS() == "Windows"
@@ -10,11 +10,11 @@ if iswindows then
 	void* GetStdHandle(DWORD nStdHandle); int SetConsoleTextAttribute(void* HANDLE, WORD wAttributes);]]
 end
 
-local __table__, __string__, indent, comma, space, newline = 'table', 'string', '  ', ', ', ' ', '\n'
+local __table__, __string__, indent, comma, space, newline = 'table', 'string', '\t', ', ', ' ', '\n'
 local function checkstringtable(v)
 	if type(v) == __table__ then
-		local meta = getmetatable(v)
-		return not meta or not meta.__tostring
+		v = getmetatable(v)
+		return not v or not v.__tostring
 	end
 	return false
 end
@@ -31,19 +31,12 @@ function stringifytable(t, usespace, depth)
 	depth = (depth or 0) + 1
 	if depth > maxdepth then return "Limited" end
 
-	local newline = usespace and '' or newline
-	local str, iter = '{', 0
-
+	local iter, newline, str = 0, usespace and '' or newline
 	for i, v in pairs(t) do
 		iter = iter + 1
+		str = (iter > 1 and str .. comma or '{') .. newline .. indentation(usespace, depth)
 
-		if iter > 1 then str = str .. comma end
-		str = str .. newline .. indentation(usespace, depth)
-
-		if i ~= iter then
-			str = str .. '[' .. stringifyvalue(v, usespace, depth) .. '] = '
-		end
-
+		if i ~= iter then str = str .. '[' .. stringifyvalue(i, usespace, depth) .. '] = ' end
 		str = str .. stringifyvalue(v, usespace, depth)
 	end
 
@@ -51,8 +44,7 @@ function stringifytable(t, usespace, depth)
 end
 
 local out, hash, time, bracketl, bracketr = io.stdout, '#', '%X', '[', ']'
-local setcolor, bgc
-local ogprint = print
+local os_date, os_time, setc = os.date, os.time
 if iswindows then
 	local colors = {
 		[30] = 0,
@@ -72,12 +64,18 @@ if iswindows then
 		[93] = 14,
 		[97] = 15
 	}
-	function setcolor(bg, fg) if bg == 0 or fg == 0 then return setcolor((bg == 0 or bg == nil) and 30 or bg, (fg == 0 or fg == nil) and 37 or fg) end ffi.C.SetConsoleTextAttribute(ffi.C.GetStdHandle(4294967285), (colors[bg] * 16) + colors[fg]) end
-	function bgc(v) return v end
+	function setc(bg, fg)
+		if bg == 0 or fg == 0 then return setc((bg == 0 or bg == nil) and 30 or bg, (fg == 0 or fg == nil) and 37 or fg) end
+		ffi.C.SetConsoleTextAttribute(ffi.C.GetStdHandle(4294967285), (colors[bg] * 16) + colors[fg])
+	end
 else
 	local c, m = '\x1b[', 'm'
-	function setcolor(...) for i = 1, select(hash, ...) do out:write(c .. select(i, ...) .. m) end end
-	function bgc(v) return v == 0 and 0 or v + 10 end
+	function setc(bg, fg, bold)
+		bg = c .. (bg == 0 and bg or bg + 10) .. m
+		if fg ~= nil then bg = bg .. c .. fg .. m end
+		if bold then bg = bg .. c .. 1 .. m end
+		out:write(bg)
+	end
 end
 local function prettyvalues(...)
 	local str, v = ''
@@ -88,40 +86,40 @@ local function prettyvalues(...)
 	end
 	return str
 end
-if debug then
-	local l, Sl = ':', "Sl"
+if debug and debug.getinfo then
+	local getinfo, l, Sl = debug.getinfo, ':', "Sl"
 	function print(...)
-		setcolor(bgc(timebgcolor), timefgcolor, 1); out:write(bracketl .. os.date(time, os.time()) .. bracketr)
-		setcolor(0); out:write(space)
+		setc(timebgcolor, timefgcolor, true); out:write(bracketl .. os_date(time, os_time()) .. bracketr)
+		setc(0); out:write(space)
 
-		local info = debug.getinfo(2, Sl)
-		setcolor(bgc(srcbgcolor), srcfgcolor); out:write(info.short_src .. l .. info.currentline .. l)
+		local info = getinfo(2, Sl)
+		setc(srcbgcolor, srcfgcolor); out:write(info.short_src .. l .. info.currentline .. l)
 
-		setcolor(0); out:write(space .. prettyvalues(...) .. newline)
+		setc(0); out:write(space .. prettyvalues(...) .. newline)
 	end
 
 	function warn(...)
-		setcolor(bgc(timebgcolor), timefgcolor, 1); out:write(bracketl .. os.date(time, os.time()) .. bracketr)
-		setcolor(0); out:write(space)
+		setc(timebgcolor, timefgcolor, 1); out:write(bracketl .. os_date(time, os_time()) .. bracketr)
+		setc(0); out:write(space)
 
-		local info = debug.getinfo(2, Sl)
-		setcolor(bgc(warnbgcolor), warnfgcolor); out:write(info.short_src .. l .. info.currentline .. l)
-		setcolor(0); out:write(space)
+		local info = getinfo(2, Sl)
+		setc(warnbgcolor, warnfgcolor); out:write(info.short_src .. l .. info.currentline .. l)
+		setc(0); out:write(space)
 
-		setcolor(bgc(warnbgcolor), warnfgcolor); out:write(prettyvalues(...) .. newline)
-		setcolor(0)
+		setc(warnbgcolor, warnfgcolor); out:write(prettyvalues(...) .. newline)
+		setc(0)
 	end
 else
 	function print(...)
-		setcolor(bgc(timebgcolor), timefgcolor, 1); out:write(bracketl .. os.date(time, os.time()) .. bracketr)
-		setcolor(0); out:write(space .. prettyvalues(...) .. newline)
+		setc(timebgcolor, timefgcolor, 1); out:write(bracketl .. os_date(time, os_time()) .. bracketr)
+		setc(0); out:write(space .. prettyvalues(...) .. newline)
 	end
 
 	function warn(...)
-		setcolor(bgc(timebgcolor), timefgcolor, 1); out:write(bracketl .. os.date(time, os.time()) .. bracketr)
-		setcolor(0); out:write(space)
+		setc(timebgcolor, timefgcolor, 1); out:write(bracketl .. os_date(time, os_time()) .. bracketr)
+		setc(0); out:write(space)
 
-		setcolor(bgc(warnbgcolor), warnfgcolor); out:write(prettyvalues(...) .. newline)
-		setcolor(0)
+		setc(warnbgcolor, warnfgcolor); out:write(prettyvalues(...) .. newline)
+		setc(0)
 	end
 end

@@ -48,7 +48,7 @@ function funkin.init(initialScene)
 		print(Conductor.instance.currentBeat, Conductor.instance.currentMeasure)
 	end)
 
-	--love.autoPause = true
+	love.autoPause = true
 end
 
 function funkin.update(dt)
