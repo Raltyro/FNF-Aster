@@ -54,13 +54,13 @@ function SoundManager.pause()
 			table.insert(SoundManager._pausedSources, sound._source)
 		end
 	end
-	love.audio.pause(SoundManager._pausedSources)
+	pcall(love.audio.pause, SoundManager._pausedSources)
 
 	SoundManager.paused = true
 end
 
 function SoundManager.resume()
-	love.audio.play(SoundManager._pausedSources)
+	pcall(love.audio.play, SoundManager._pausedSources)
 	table.clear(SoundManager._pausedSources)
 
 	SoundManager.paused = false

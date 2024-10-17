@@ -2,6 +2,8 @@ local srcfgcolor, srcbgcolor = 96, 0
 local warnfgcolor, warnbgcolor = 33, 0
 local timefgcolor, timebgcolor = 35, 0
 local maxdepth = 16
+local usespacearraysize = 3
+local includetablestr = true
 
 local iswindows, ffi = love.system.getOS() == "Windows"
 if iswindows then
@@ -10,7 +12,7 @@ if iswindows then
 	void* GetStdHandle(DWORD nStdHandle); int SetConsoleTextAttribute(void* HANDLE, WORD wAttributes);]]
 end
 
-local __table__, __string__, indent, comma, space, newline = 'table', 'string', '\t', ', ', ' ', '\n'
+local __table__, __string__, indent, comma, space, newline = 'table', 'string', '\t', ',', ' ', '\n'
 local function checkstringtable(v)
 	if type(v) == __table__ then
 		v = getmetatable(v)
@@ -20,9 +22,9 @@ local function checkstringtable(v)
 end
 
 local stringifytable
-local function indentation(space, depth) return depth == 0 and '' or (space and ' ' or indent:rep(depth)) end
-local function stringifyvalue(v, space, depth)
-	return checkstringtable(v) and stringifytable(v, space, depth) or
+local function indentation(usespace, depth) return usespace and space or indent:rep(depth) end
+local function stringifyvalue(v, usespace, depth)
+	return checkstringtable(v) and stringifytable(v, usespace, depth) or
 		type(v) == __string__ and ('"' .. v .. '"') or
 		tostring(v)
 end
@@ -30,8 +32,19 @@ end
 function stringifytable(t, usespace, depth)
 	depth = (depth or 0) + 1
 	if depth > maxdepth then return "Limited" end
+	
+	local iter = 0
+	if not usespace and usespacearraysize then
+		for _ in pairs(t) do
+			iter = iter + 1
+			if iter > usespacearraysize then break end
+		end
+		if iter == 0 then return (includetablestr and tostring(t) .. space or '') .. '{}'
+		elseif iter <= usespacearraysize then return stringifytable(t, true, depth) end
+		iter = 0
+	end
 
-	local iter, newline, str = 0, usespace and '' or newline
+	local newline, str = usespace and '' or newline
 	for i, v in pairs(t) do
 		iter = iter + 1
 		str = (iter > 1 and str .. comma or '{') .. newline .. indentation(usespace, depth)
@@ -40,7 +53,7 @@ function stringifytable(t, usespace, depth)
 		str = str .. stringifyvalue(v, usespace, depth)
 	end
 
-	return tostring(t) .. space .. (iter == 0 and '{}' or (str .. newline .. indentation(usespace, depth - 1) .. '}'))
+	return (includetablestr and tostring(t) .. space or '') .. (iter == 0 and '{}' or (str .. newline .. indentation(usespace, depth - 1) .. '}'))
 end
 
 local out, hash, time, bracketl, bracketr = io.stdout, '#', '%X', '[', ']'
@@ -81,7 +94,7 @@ local function prettyvalues(...)
 	local str, v = ''
 	for i = 1, select(hash, ...) do
 		v = select(i, ...)
-		if i > 1 then str = str .. comma end
+		if i > 1 then str = str .. comma .. space end
 		str = str .. (checkstringtable(v) and stringifytable(v) or tostring(v))
 	end
 	return str
