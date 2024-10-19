@@ -80,12 +80,14 @@ function Conductor:get_bpm()
 	local timeChange = self:get_currentTimeChange()
 	if timeChange then
 		if timeChange.endTime then
-			local prev = self.timeChanges[self.currentTimeChangeIdx - 1]
-			if not prev then return timeChange.bpm end
+			if self.songPosition >= timeChange.endTime then return timeChange.bpm end
 
-			return prev.bpm * math.exp((1 / (timeChange.endTime - timeChange.time) * math.log(timeChange.bpm / prev.bpm)) * (
-				math.clamp(self.songPosition, timeChange.time, timeChange.endTime) - timeChange.time
-			))
+			local prev = self.timeChanges[self.currentTimeChangeIdx - 1]
+			if not prev then return timeChange.bpm
+			elseif self.songPosition < timeChange.time then return prev.bpm end
+
+			-- BPM isn't so linear afterall
+			return prev.bpm * math.exp((1 / (timeChange.endTime - timeChange.time) * math.log(timeChange.bpm / prev.bpm)) * (self.songPosition - timeChange.time))
 		end
 		return timeChange.bpm
 	end
@@ -164,12 +166,12 @@ function Conductor:update(sound, forceDispatch, applyOffsets)
 		startBeatTime = (resetSignature and math.ceil(math.truncate(startBeatTime, 6)) or startBeatTime)
 
 		if timeChange.endTime and self.currentTimeChangeIdx > 1 then
-			local prevBPM = self.timeChanges[self.currentTimeChangeIdx - 1].bpm
+			local prevBPM, bpm = self.timeChanges[self.currentTimeChangeIdx - 1].bpm, self:get_bpm()
 			if songPosition > timeChange.endTime then
-				self.currentBeatTime = startBeatTime + (timeChange.endTime - timeChange.time) * (self.bpm - prevBPM) / math.log(self.bpm / prevBPM) / 60 +
+				self.currentBeatTime = startBeatTime + (timeChange.endTime - timeChange.time) * (bpm - prevBPM) / math.log(bpm / prevBPM) / 60 +
 					(songPosition - timeChange.endTime) / self:get_beatLength()
 			else
-				self.currentBeatTime = startBeatTime + (songPosition - timeChange.time) * (self.bpm - prevBPM) / math.log(self.bpm / prevBPM) / 60
+				self.currentBeatTime = startBeatTime + (songPosition - timeChange.time) * (bpm - prevBPM) / math.log(bpm / prevBPM) / 60
 			end
 		else
 			self.currentBeatTime = startBeatTime + (songPosition - timeChange.time) / self:get_beatLength()
