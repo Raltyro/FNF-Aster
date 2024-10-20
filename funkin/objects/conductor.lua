@@ -79,9 +79,7 @@ end
 function Conductor:get_bpm()
 	local timeChange = self:get_currentTimeChange()
 	if timeChange then
-		if timeChange.endTime then
-			if self.songPosition >= timeChange.endTime then return timeChange.bpm end
-
+		if timeChange.endTime and self.songPosition < timeChange.endTime then
 			local prev = self.timeChanges[self.currentTimeChangeIdx - 1]
 			if not prev then return timeChange.bpm
 			elseif self.songPosition < timeChange.time then return prev.bpm end
