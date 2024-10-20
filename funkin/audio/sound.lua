@@ -201,13 +201,12 @@ end
 function Sound:get_time()
 	if not self.loaded then return 0 end
 
-	-- this may look.. janky but the :tell() function or openal-soft internal can't keep up with refresh rates above 60
+	-- this may look.. janky but the :tell() function or openal-soft internal can't keep up with refresh rates roughly below 16ms
 	-- so this is the atleast best thing todo
 	local success, position = pcall(self._source.tell, self._source)
 	if not success then return 0
 	elseif position ~= self._time then
-		self._time = position
-		self._timelast = love.timer.getTime()
+		self._time, self._timelast = position, love.timer.getTime()
 		return position
 	elseif self.playing and self._timelast then
 		return position + math.min(love.timer.getTime() - self._timelast, 0.05) * self:getActualPitch()
