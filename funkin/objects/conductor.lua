@@ -77,19 +77,11 @@ end
 
 ---Beats per minute of the current song at the current time.
 function Conductor:get_bpm()
-	local timeChange = self:get_currentTimeChange()
-	if timeChange then
-		if timeChange.endTime and self.songPosition < timeChange.endTime then
-			local prev = self.timeChanges[self.currentTimeChangeIdx - 1]
-			if not prev then return timeChange.bpm
-			elseif self.songPosition < timeChange.time then return prev.bpm end
-
-			-- BPM isn't so linear afterall, formula is pbpm * exp((1 / duration * ln(bpm / pbpm)) * elapsed), simplified
-			return prev.bpm * math.exp(math.log(timeChange.bpm / prev.bpm) * math.invlerp(timeChange.time, timeChange.endTime, self.songPosition))
-		end
-		return timeChange.bpm
+	if self.currentTimeChangeIdx > 1 then
+		return self:rawgetTimeInBPM(self.songPosition, self.currentTimeChangeIdx)
+	else
+		return Conductor.DEFAULT_BPM
 	end
-	return Conductor.DEFAULT_BPM
 end
 
 ---Beats per minute of the current song at the start time.
@@ -99,8 +91,8 @@ function Conductor:get_startingBPM()
 end
 
 ---Duration of a measure in seconds. Calculated based on bpm.
-function Conductor:get_measureLengthM(timeChange)
-	return self:get_beatLength(timeChange) * self:get_numerator(timeChange)
+function Conductor:get_measureLength(timeChange)
+	return self:get_beatLength(timeChange) / self:get_beatsPerMeasure(timeChange)
 end
 
 ---Duration of a beat (quarter note) in seconds. Calculated based on bpm.
@@ -126,14 +118,13 @@ function Conductor:get_denominator(timeChange)
 end
 
 ---The number of beats in a measure. May be fractional depending on the time signature.
--- TODO: fix this?
 function Conductor:get_beatsPerMeasure(timeChange)
 	return self:get_numerator(timeChange) / self:get_denominator(timeChange) * 4
 end
 
 ---The number of steps in a measure.
 function Conductor:get_stepsPerMeasure(timeChange)
-	return self:get_numerator(timeChange) / self:get_denominator(timeChange) * 16
+	return (self:get_numerator(timeChange) ^ 2 * 4) / self:get_denominator(timeChange)
 end
 
 function Conductor:update(sound, forceDispatch, applyOffsets)
@@ -147,7 +138,7 @@ function Conductor:update(sound, forceDispatch, applyOffsets)
 			self.onStepHit:dispatch()
 			self.onBeatHit:dispatch()
 			self.onMeasureHit:dispatch()
-			self.onMetronomeHit:dispatch(0)
+			self.onMetronomeHit:dispatch(false)
 		end
 		return
 	end
@@ -155,33 +146,12 @@ function Conductor:update(sound, forceDispatch, applyOffsets)
 	self.songPosition, self.oldMeasure, self.oldBeat, self.oldStep = songPosition, self.currentMeasure, self.currentBeat, self.currentStep
 
 	self.currentTimeChangeIdx = self:getTimeInChangeIdx(songPosition, self.currentTimeChangeIdx)
-	local timeChange = self.currentTimeChange
-	if timeChange == nil then
+	if self.currentTimeChangeIdx > 1 then
+		self.currentBeatTime, self.currentMeasureTime = self:rawgetTimeInBeats(songPosition, self.currentTimeChangeIdx,
+			self:rawgetTimeInBPM(songPosition, self.currentTimeChangeIdx))
+	else
 		self.currentBeatTime = songPosition / self:get_beatLength()
 		self.currentMeasureTime = self.currentBeatTime / self:get_beatsPerMeasure()
-	else
-		local startBeatTime, resetSignature = timeChange.beatTime or 0, timeChange.resetSignature or (timeChange.resetSignature ~= false and (timeChange.numerator or timeChange.denominator))
-		startBeatTime = (resetSignature and math.ceil(math.truncate(startBeatTime, 6)) or startBeatTime)
-
-		if timeChange.endTime and self.currentTimeChangeIdx > 1 then
-			local prevBPM, bpm = self.timeChanges[self.currentTimeChangeIdx - 1].bpm, self:get_bpm()
-			if songPosition > timeChange.endTime then
-				self.currentBeatTime = startBeatTime + (timeChange.endTime - timeChange.time) * (bpm - prevBPM) / math.log(bpm / prevBPM) / 60 +
-					(songPosition - timeChange.endTime) / self:get_beatLength()
-			else
-				self.currentBeatTime = startBeatTime + (songPosition - timeChange.time) * (bpm - prevBPM) / math.log(bpm / prevBPM) / 60
-			end
-		else
-			self.currentBeatTime = startBeatTime + (songPosition - timeChange.time) / self:get_beatLength()
-		end
-
-		if timeChange.measureTime then
-			self.currentMeasureTime = (resetSignature and math.ceil(math.truncate(timeChange.measureTime, 6)) or timeChange.measureTime) + (self.currentBeatTime - startBeatTime) / self:get_beatsPerMeasure()
-		--elseif resetSignature then
-		--	self.currentMeasureTime = math.ceil(startBeatTime / self:get_beatsPerMeasure(self.timeChanges[self.currentTimeChangeIdx - 1])) + (songPosition - timeChange.time) / self:get_beatLength(timeChange) / self:get_beatsPerMeasure(timeChange)
-		else
-			self.currentMeasureTime = self.currentBeatTime / self:get_beatsPerMeasure()
-		end
 	end
 	self.currentStepTime = self.currentBeatTime * self:get_numerator()
 
@@ -191,55 +161,104 @@ function Conductor:update(sound, forceDispatch, applyOffsets)
 	if self.currentStep ~= self.oldStep or forceDispatch then self.onStepHit:dispatch() end
 	if beatTicked or forceDispatch then self.onBeatHit:dispatch() end
 	if measureTicked or forceDispatch then self.onMeasureHit:dispatch() end
-
-	if beatTicked or measureTicked or forceDispatch then
-		self.onMetronomeHit:dispatch(measureTicked)
-	end
+	if beatTicked or measureTicked or forceDispatch then self.onMetronomeHit:dispatch(measureTicked) end
 end
 
 function Conductor:getTimeInChangeIdx(time, from)
-	if #self.timeChanges < 2 then return 1 end
-	from = math.clamp(from or 1, 1, #self.timeChanges)
+	local c = #self.timeChanges; if c < 2 then return c end
 
+	from = from and math.clamp(from, 1, c) or 1
 	if self.timeChanges[from].time > time then
-		while from > 1 do from = from - 1; if time > self.timeChanges[from].time then return from end end
+		for i = from - 1, 2, -1 do if time > self.timeChanges[i].time then return i end end; return 1
 	else
-		local c = #self.timeChanges
-		for from = from, c do if self.timeChanges[from].time > time then return from - 1 end end
-		return c
+		for i = from + 1, c do if self.timeChanges[i].time > time then return i - 1 end end; return c
 	end
-
-	return from
 end
 
-function Conductor:getBeatTimeInChangeIdx(beatTime, from)
-	if #self.timeChanges < 2 then return 1 end
-	from = math.clamp(from or 1, 1, #self.timeChanges)
+function Conductor:getBeatsInChangeIdx(beatTime, from)
+	local c = #self.timeChanges; if c < 2 then return c end
 
+	from = from and math.clamp(from, 1, c) or 1
 	if self.timeChanges[from].beatTime > beatTime then
-		while from > 1 do from = from - 1; if beatTime > self.timeChanges[from].beatTime then return from end end
+		for i = from - 1, 2, -1 do if beatTime > self.timeChanges[i].beatTime then return i end end; return 1
 	else
-		local c = #self.timeChanges
-		for from = from, c do if self.timeChanges[from].beatTime > beatTime then return from - 1 end end
-		return c
+		for i = from + 1, c do if self.timeChanges[i].beatTime > beatTime then return i - 1 end end; return c
 	end
-
-	return from
 end
 
-function Conductor:getMeasureTimeInChangeIdx(measureTime, from)
-	if #self.timeChanges < 2 then return 1 end
-	from = math.clamp(from or 1, 1, #self.timeChanges)
+function Conductor:getMeasuresInChangeIdx(measureTime, from)
+	local c = #self.timeChanges; if c < 2 then return c end
 
+	from = from and math.clamp(from, 1, c) or 1
 	if self.timeChanges[from].measureTime > measureTime then
-		while from > 1 do from = from - 1; if measureTime > self.timeChanges[from].measureTime then return from end end
+		for i = from - 1, 2, -1 do if measureTime > self.timeChanges[i].measureTime then return i end end; return 1
 	else
-		local c = #self.timeChanges
-		for from = from, c do if self.timeChanges[from].measureTime > measureTime then return from - 1 end end
-		return c
+		for i = from + 1, c do if self.timeChanges[i].measureTime > measureTime then return i - 1 end end; return c
+	end
+end
+
+function Conductor:rawgetTimeInBPM(time, idx)
+	local timeChange = self.timeChanges[idx]
+	if timeChange.endTime and time < timeChange.endTime then
+		local prev = self.timeChanges[idx - 1]
+		if not prev then return timeChange.bpm elseif time <= timeChange.time then return prev.bpm end
+
+		-- BPM isn't so linear afterall, formula is pbpm * exp((1 / duration * ln(bpm / pbpm)) * elapsed), simplified
+		local ratio = math.invlerp(timeChange.time, timeChange.endTime, time)
+		return prev.bpm ^ (1 - ratio) * timeChange.bpm ^ ratio
+	else
+		return timeChange.bpm
+	end
+end
+
+function Conductor:getTimeInBPM(time, from)
+	local idx = self:getTimeInChangeIdx(time, from)
+	if idx < 2 then return Conductor.DEFAULT_BPM else return self:rawgetTimeInBPM(time, idx) end
+end
+
+function Conductor:rawgetTimeInBeats(time, idx, bpm)
+	local timeChange = self.timeChanges[idx]
+	local startBeatTime, resetSignature = timeChange.beatTime or 0,
+		timeChange.resetSignature or (timeChange.resetSignature ~= false and (timeChange.numerator or timeChange.denominator))
+
+	startBeatTime = (resetSignature and math.ceil(math.truncate(startBeatTime, 6)) or startBeatTime)
+
+	local beatTime, measureTime
+	if timeChange.endTime and time > timeChange.time and idx > 1 then
+		local prevBPM = self.timeChanges[idx - 1].bpm
+		if time > timeChange.endTime then
+			if timeChange.endBeatTime then
+				beatTime = timeChange.endBeatTime + (time - timeChange.endTime) / self:get_beatLength(timeChange)
+			else
+				beatTime = startBeatTime + (timeChange.endTime - timeChange.time) * (bpm - prevBPM) / math.log(bpm / prevBPM) / 60 +
+					(time - timeChange.endTime) / self:get_beatLength(timeChange)
+			end
+		else
+			beatTime = startBeatTime + (time - timeChange.time) * (bpm - prevBPM) / math.log(bpm / prevBPM) / 60
+		end
+	else
+		beatTime = startBeatTime + (time - timeChange.time) / self:get_beatLength(timeChange)
 	end
 
-	return from
+	if timeChange.measureTime then
+		measureTime = (resetSignature and math.ceil(math.truncate(timeChange.measureTime, 6)) or timeChange.measureTime) + (beatTime - startBeatTime) / self:get_beatsPerMeasure(timeChange)
+	--elseif resetSignature then
+	--	measureTime = math.ceil(startBeatTime / self:get_beatsPerMeasure(self.timeChanges[idx - 1])) + (beatTime - startBeatTime) / self:get_beatsPerMeasure(timeChange)
+	else
+		measureTime = beatTime / self:get_beatsPerMeasure(timeChange)
+	end
+
+	return beatTime, measureTime
+end
+
+function Conductor:getTimeInBeats(time, from)
+	local idx = self:getTimeInChangeIdx(time, from)
+	if idx < 2 then return time / self.beatLength else return self:rawgetTimeInBeats(time, idx, self:rawgetTimeInBPM(time, idx)) end
+end
+
+function Conductor:getTimeInMeasures(time, from)
+	local idx = self:getTimeInChangeIdx(time, from)
+	if idx < 2 then return time / self.get_measureLength else return select(2, self:rawgetTimeInBeats(time, idx, self:rawgetTimeInBPM(time, idx))) end
 end
 
 function Conductor:mapTimeChanges(timeChanges)
@@ -248,12 +267,16 @@ function Conductor:mapTimeChanges(timeChanges)
 
 	local prev, prev2
 	for i, timeChange in pairs(timeChanges) do
+		timeChange.resetSignature = timeChange.resetSignature or (timeChange.resetSignature ~= false and (timeChange.numerator or timeChange.denominator))
+
 		if i == 1 then
 			timeChange.time = math.max(timeChange.time or 0, 0)
 			timeChange.beatTime = timeChange.time / (60 / timeChange.bpm)
 		elseif (timeChange.time and timeChange.time <= 0) or (timeChange.beatTime and timeChange.beatTime <= 0) then
 			timeChange.time, timeChange.beatTime = 0, 0
 		elseif timeChange.beatTime and not timeChange.time then
+			timeChange.beatTime = timeChange.resetSignature and math.ceil(math.truncate(timeChange.beatTime, 6)) or timeChange.beatTime
+
 			if prev.endTime and prev2 then--(prev.endTime - prev.time) * (prev.bpm - prev2.bpm) / math.log(prev.bpm / prev2.bpm) / 60
 				timeChange.time = prev.endTime + timeChange.beatTime * (60 / prev.bpm)-- - (prev.beatTime)
 				if prev.endBeatTime then
@@ -274,9 +297,9 @@ function Conductor:mapTimeChanges(timeChanges)
 			else
 				timeChange.beatTime = prev.beatTime + (timeChange.time - prev.time) / (60 / prev.bpm)
 			end
+
+			timeChange.beatTime = timeChange.resetSignature and math.ceil(math.truncate(timeChange.beatTime, 6)) or timeChange.beatTime
 		end
-		local resetSignature = timeChange.resetSignature or (timeChange.resetSignature ~= false and (timeChange.numerator or timeChange.denominator))
-		timeChange.beatTime = timeChange.resetSignature and math.ceil(math.truncate(timeChange.beatTime, 6)) or timeChange.beatTime
 
 		if prev then
 			timeChange.measureTime = prev.measureTime + (timeChange.beatTime - prev.beatTime) / self:get_beatsPerMeasure(prev)
