@@ -4,6 +4,7 @@ local timefgcolor, timebgcolor = 35, 0
 local maxdepth = 16
 local usespacearraysize = 3
 local includetablestr = true
+local removetostring14decimallimit = true
 
 local iswindows, ffi = love.system.getOS() == "Windows"
 if iswindows then
@@ -12,7 +13,15 @@ if iswindows then
 	void* GetStdHandle(DWORD nStdHandle); int SetConsoleTextAttribute(void* HANDLE, WORD wAttributes);]]
 end
 
-local __table__, __string__, indent, comma, space, newline = 'table', 'string', '\t', ',', ' ', '\n'
+local __table__, __string__, __number__, indent, comma, space, newline = 'table', 'string', 'number', '\t', ',', ' ', '\n'
+local tostring = tostring
+if removetostring14decimallimit then
+	local f, g = '%.64f', "%.?0+$"
+	local ogstring = tostring
+	function tostring(v)
+		return type(v) == __number__ and f:format(v):gsub(g, '') or ogstring(v)
+	end
+end
 local function checkstringtable(v)
 	if type(v) == __table__ then
 		v = getmetatable(v)
@@ -94,6 +103,7 @@ local function prettyvalues(...)
 	local str, v = ''
 	for i = 1, select(hash, ...) do
 		v = select(i, ...)
+
 		if i > 1 then str = str .. comma .. space end
 		str = str .. (checkstringtable(v) and stringifytable(v) or tostring(v))
 	end
