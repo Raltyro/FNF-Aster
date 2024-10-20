@@ -2,6 +2,7 @@ local Signal = require("funkin.utils.signal")
 
 local Conductor = Basic:extend("Conductor")
 Conductor.DEFAULT_BPM = 100
+Conductor.DEFAULT_BEAT_TUPLETS = 4
 
 function Conductor.sortByTime(a, b)
 	if a.beatTime or b.beatTime then return (a.beatTime or -math.huge) < (b.beatTime or -math.huge)
@@ -86,8 +87,7 @@ end
 
 ---Beats per minute of the current song at the start time.
 function Conductor:get_startingBPM()
-	local timeChange = self.timeChanges[0]
-	return timeChange and timeChange.bpm or Conductor.DEFAULT_BPM
+	return self.timeChanges[1] and self.timeChanges[1].bpm or Conductor.DEFAULT_BPM
 end
 
 ---Duration of a measure in seconds. Calculated based on bpm.
@@ -103,6 +103,7 @@ end
 ---Duration of a step (sixtennth note) in seconds. Calculated based on bpm.
 function Conductor:get_stepLength(timeChange)
 	return self:get_beatLength(timeChange) / self:get_numerator(timeChange)
+	-- return self:get_beatLength(timeChange) / beatTuplets
 end
 
 ---The numerator for the current time signature (the `3` in `3/4`).
@@ -125,6 +126,7 @@ end
 ---The number of steps in a measure.
 function Conductor:get_stepsPerMeasure(timeChange)
 	return (self:get_numerator(timeChange) ^ 2 * 4) / self:get_denominator(timeChange)
+	-- return self:get_numerator(timeChange) / self:get_denominator(timeChange) * 4 * beatTuplets
 end
 
 function Conductor:update(sound, forceDispatch, applyOffsets)
@@ -134,7 +136,7 @@ function Conductor:update(sound, forceDispatch, applyOffsets)
 
 	local songPosition = sound == nil and SoundManager.music or (type(sound) == 'number' and sound or sound.time) - (applyOffsets and self.offset or 0)
 	if songPosition == self.songPosition then
-		if forceDispatch then
+		if forceDispatch ~= false and forceDispatch then
 			self.onStepHit:dispatch()
 			self.onBeatHit:dispatch()
 			self.onMeasureHit:dispatch()
@@ -157,11 +159,13 @@ function Conductor:update(sound, forceDispatch, applyOffsets)
 
 	self.currentBeat, self.currentStep, self.currentMeasure = math.floor(self.currentBeatTime), math.floor(self.currentStepTime), math.floor(self.currentMeasureTime)
 	
-	local beatTicked, measureTicked = self.currentBeat ~= self.oldBeat, self.currentMeasure ~= self.oldMeasure
-	if self.currentStep ~= self.oldStep or forceDispatch then self.onStepHit:dispatch() end
-	if beatTicked or forceDispatch then self.onBeatHit:dispatch() end
-	if measureTicked or forceDispatch then self.onMeasureHit:dispatch() end
-	if beatTicked or measureTicked or forceDispatch then self.onMetronomeHit:dispatch(measureTicked) end
+	if forceDispatch ~= false then
+		local beatTicked, measureTicked = self.currentBeat ~= self.oldBeat, self.currentMeasure ~= self.oldMeasure
+		if self.currentStep ~= self.oldStep or forceDispatch then self.onStepHit:dispatch() end
+		if beatTicked or forceDispatch then self.onBeatHit:dispatch() end
+		if measureTicked or forceDispatch then self.onMeasureHit:dispatch() end
+		if beatTicked or measureTicked or forceDispatch then self.onMetronomeHit:dispatch(measureTicked) end
+	end
 end
 
 function Conductor:getTimeInChangeIdx(time, from)
@@ -258,8 +262,18 @@ end
 
 function Conductor:getTimeInMeasures(time, from)
 	local idx = self:getTimeInChangeIdx(time, from)
-	if idx < 2 then return time / self.get_measureLength else return select(2, self:rawgetTimeInBeats(time, idx, self:rawgetTimeInBPM(time, idx))) end
+	if idx < 2 then return time / self.measureLength else return select(2, self:rawgetTimeInBeats(time, idx, self:rawgetTimeInBPM(time, idx))) end
 end
+
+--[[
+function Conductor:rawgetBeatsInTime(beatTime, idx, bpm)
+
+end
+
+function Conductor:getBeatsInTime(beatTime, from)
+	local idx = self:getBeatsInChangeIdx(beatTime, from)
+	if idx < 2 then return beatTime * self.beatLength else return self:rawgetBeatsInTime(beatTime, idx, self:rawgetTimeInBPM(time, idx)) end
+end]]
 
 function Conductor:mapTimeChanges(timeChanges)
 	if self.destroyed then return end
