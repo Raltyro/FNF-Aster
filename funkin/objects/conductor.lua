@@ -86,8 +86,8 @@ function Conductor:get_bpm()
 			if not prev then return timeChange.bpm
 			elseif self.songPosition < timeChange.time then return prev.bpm end
 
-			-- BPM isn't so linear afterall
-			return prev.bpm * math.exp((1 / (timeChange.endTime - timeChange.time) * math.log(timeChange.bpm / prev.bpm)) * (self.songPosition - timeChange.time))
+			-- BPM isn't so linear afterall, formula is pbpm * exp((1 / duration * ln(bpm / pbpm)) * elapsed), simplified
+			return prev.bpm * math.exp(math.log(timeChange.bpm / prev.bpm) * math.invlerp(timeChange.time, timeChange.endTime, self.songPosition))
 		end
 		return timeChange.bpm
 	end
