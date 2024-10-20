@@ -77,7 +77,7 @@ end
 
 ---Beats per minute of the current song at the current time.
 function Conductor:get_bpm()
-	if self.currentTimeChangeIdx > 1 then
+	if #self.timeChanges > 1 then
 		return self:rawgetTimeInBPM(self.songPosition, self.currentTimeChangeIdx)
 	else
 		return Conductor.DEFAULT_BPM
