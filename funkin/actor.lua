@@ -3,7 +3,7 @@ local Actor = Basic:extend("Actor")
 function Actor:new(x, y, z)
 	Actor.super.new(self)
 
-	self.position, self.rotation = {x or 0, y or 0, z or 0}, {0, 0, 0}
+	self.position, self.rotation = {x = x or 0, y = y or 0, z = z or 0}, {x = 0, y = 0, z = 0}
 	self.angle = 0 -- Rotates this Actor by Perspective
 
 	self.offset = {x = 0, y = 0, z = 0}

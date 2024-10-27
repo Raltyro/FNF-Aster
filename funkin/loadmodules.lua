@@ -4,10 +4,12 @@ Classic = require("lib.classic")
 
 Basic = require("funkin.basic")
 Actor = require("funkin.actor")
+Scene = require("funkin.scene")
 Sound = require("funkin.audio.sound")
 Sprite = require("funkin.graphics.sprite")
 Camera = require("funkin.graphics.camera")
-Conductor = require("funkin.objects.conductor")
 
 SoundManager = require("funkin.managers.soundmanager")
---SceneManager = require("funkin.managers.scenemanager")
+SceneManager = require("funkin.managers.scenemanager")
+
+Conductor = require("funkin.objects.conductor")
