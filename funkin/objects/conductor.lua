@@ -105,17 +105,17 @@ end
 
 ---The numerator for the current time signature (the `3` in `3/4`).
 function Conductor:get_numerator(timeChange)
-	return (timeChange or self:get_currentTimeChange() or DEFAULT_TIMECHANGES).numerator
+	return (timeChange or self:get_currentTimeChange()).numerator or DEFAULT_TIMECHANGES.numerator
 end
 
 ---The denominator for the current time signature (the `4` in `3/4`).
 function Conductor:get_denominator(timeChange)
-	return (timeChange or self:get_currentTimeChange() or DEFAULT_TIMECHANGES).denominator
+	return (timeChange or self:get_currentTimeChange()).denominator or DEFAULT_TIMECHANGES.denominator
 end
 
 ---The tuplet for the current time change
 function Conductor:get_tuplet(timeChange)
-	return (timeChange or self:get_currentTimeChange() or DEFAULT_TIMECHANGES).tuplet
+	return (timeChange or self:get_currentTimeChange()).tuplet or DEFAULT_TIMECHANGES.tuplet
 end
 
 ---The number of steps in a measure.

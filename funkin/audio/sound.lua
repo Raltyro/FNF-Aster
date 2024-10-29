@@ -62,6 +62,7 @@ function Sound:cleanup()
 	self._paused = true
 	self._wasFinished = false
 	self._source = nil
+	self._soundData = nil
 	self._attachedGroup = nil
 	self._time = 0
 end
@@ -75,8 +76,15 @@ function Sound:load(asset, autoDestroy, onComplete)
 	if self.destroyed or asset == nil then return end
 	self:cleanup()
 
-	self.isSource = asset:typeOf("Source")
-	self._source = self.isSource and asset or love.audio.newSource(asset)
+	self.isSource = type(asset) == 'userdata' and asset:typeOf("Source")
+	if self.isSource then
+		self._source = asset
+	else
+		local soundData = type(asset) == 'string' and Assets.getSound(asset) or asset
+		if soundData ~= self._soundData then
+			self._source, self._soundData = love.audio.newSource(soundData), soundData
+		end
+	end
 	return self:init(autoDestroy, onComplete)
 end
 

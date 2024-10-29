@@ -3,13 +3,13 @@ local SceneManager = {stack = {}, dirty = false, deltaTime = 0}
 local initialized_scenes = setmetatable({}, {__mode = 'k'})
 local function enter_scene(offset, to, ...)
 	local pre = SceneManager.stack[#SceneManager.stack]
-	to = type(to) == 'string' and pcall(require, to) or to
+	to = type(to) == 'string' and pcall(require, to)() or (to.isObject and to:isObject()) and to or to()
 
 	; (initialized_scenes[to] or to.init or __NULL__)(to)
 	initialized_scenes[to] = true
 
 	SceneManager.dirty = true
-	SceneManager.stack[#SceneManager.stack + offset] = to
+	SceneManager.stack[math.max(#SceneManager.stack + offset, 1)] = to
 	return (to.enter or __NULL__)(to, pre, ...)
 end
 
@@ -39,15 +39,17 @@ end
 
 function SceneManager.update(deltaTime)
 	if SceneManager.dirty then
+		deltaTime = 0
+		SceneManager.dirty = false
+	else
 		local fakedt = SceneManager.deltaTime
 		local low = math.min(math.log(1.101 + fakedt), 0.1)
 		deltaTime = deltaTime - fakedt > low and fakedt + low or deltaTime
-	else
-		deltaTime = 0
 	end
 	SceneManager.deltaTime = deltaTime
 
-	for i = #SceneManager.stack, 1, -1 do
+	local n = #SceneManager.stack
+	for i = n, 1, -1 do
 		if i == n or SceneManager.stack[i].persistentUpdate then
 			(SceneManager.stack[i].update or __NULL__)(SceneManager.stack[i], deltaTime)
 		else
@@ -57,7 +59,8 @@ function SceneManager.update(deltaTime)
 end
 
 function SceneManager.render()
-	for i = #SceneManager.stack, 1, -1 do
+	local n = #SceneManager.stack
+	for i = n, 1, -1 do
 		if i == n or SceneManager.stack[i].persistentRender then
 			(SceneManager.stack[i].render or __NULL__)(SceneManager.stack[i], deltaTime)
 		else

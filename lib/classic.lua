@@ -86,6 +86,8 @@ function Classic:is(T)
 	return false
 end
 
+function Classic:isObject() return rawget(self, __class) == nil end
+
 function Classic:__tostring() return self.__class end
 
 function Classic:__call(...)

@@ -2,8 +2,12 @@
 
 Classic = require("lib.classic")
 
+Paths = require("funkin.utils.paths")
+Assets = require("funkin.utils.assets")
+
 Basic = require("funkin.basic")
 Actor = require("funkin.actor")
+Group = require("funkin.group")
 Scene = require("funkin.scene")
 Sound = require("funkin.audio.sound")
 Sprite = require("funkin.graphics.sprite")

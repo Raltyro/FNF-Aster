@@ -41,6 +41,7 @@ function SoundManager.loadMusic(asset, onComplete)
 		SoundManager.music = SoundManager.load(asset, false, onComplete)
 		SoundManager.music.persist = true
 	end
+	return SoundManager.music
 end
 
 function SoundManager.playMusic(asset, volume, looped, ...)
