@@ -217,7 +217,7 @@ function Sound:get_time()
 		self._time, self._timelast = position, love.timer.getTime()
 		return position
 	elseif self.playing and self._timelast then
-		return position + math.min(love.timer.getTime() - self._timelast, 0.05) * self:getActualPitch()
+		return position + math.clamp(love.timer.getTime() - self._timelast, 0, 0.05) * self:getActualPitch()
 	else
 		return position
 	end

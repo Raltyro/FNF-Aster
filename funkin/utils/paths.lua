@@ -12,19 +12,22 @@ local Paths = {
 Paths.currentLevel = nil
 Paths._cachedPaths = {}
 
+local lowercaseFS = love.system.getOS() == "Windows"
+
 local function getPrefix(...) local v = {...} table.reverse(v) return table.concat(v, '/') end
 local function getSuffix(...) return table.concat({...}, '-') end
 function Paths.getPath(file, prefix, assetType)
 	file = getPrefix(prefix, 'assets') .. '/' .. file
-	if love.system.getOS() == "Windows" then file = file:lower() end
+	if lowercaseFS then file = file:lower() end
 	if Paths._cachedPaths[file] == false or file:hasExt() then return file
 	elseif assetType ~= nil then assetType = assetType:upper() .. "S" end
 
 	local cache = Paths._cachedPaths[file]
 	if cache and cache ~= true then
-		local v = love.filesystem.getInfo(file .. '.' .. cache)
+		return file .. '.' .. cache
+		--[[local v = love.filesystem.getInfo(file .. '.' .. cache)
 		if v and (v.type == 'file' or v.type == 'symlink') then return file .. '.' .. cache end
-		Paths._cachedPaths[file] = nil
+		Paths._cachedPaths[file] = nil]]
 	end
 
 	if Paths.ASSET_EXT[assetType] then
@@ -37,7 +40,8 @@ function Paths.getPath(file, prefix, assetType)
 				end
 			end
 		end
-	elseif not cache or assetType ~= cache then
+	elseif not cache or assetType:sub(1, -2) ~= cache then
+		assetType = assetType:sub(1, -2)
 		local v = love.filesystem.getInfo(file .. '.' .. assetType)
 		if v and (v.type == 'file' or v.type == 'symlink') then
 			Paths._cachedPaths[file] = assetType
