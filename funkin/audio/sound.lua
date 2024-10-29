@@ -112,7 +112,7 @@ function Sound:play(volume, looped, pitch, restart)
 
 	self._paused = false
 	self._wasFinished = false
-	if SoundManager.paused then table.insert(SoundManager._pausedSources, self)
+	if SoundManager.paused then table.insert(SoundManager._pausedSources, self._source)
 	else pcall(self._source.play, self._source) end
 	return self
 end

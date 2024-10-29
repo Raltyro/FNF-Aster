@@ -7,9 +7,10 @@ local Discord = require("funkin.api.discord")
 function funkin.init(initialScene)
 	if initialScene == nil then initialScene = require("funkin.menus.titlescene") end
 
+	SceneManager.switch(initialScene)
 	Discord.init()
 
-	SceneManager.switch(initialScene)
+	love.autoPause = true
 end
 
 function funkin.update(deltaTime)

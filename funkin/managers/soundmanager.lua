@@ -51,20 +51,27 @@ end
 
 function SoundManager.pause()
 	for _, sound in pairs(SoundManager.sounds) do
-		if sound.playing then
+		if sound.playing and type(sound._source) == 'userdata' then
 			table.insert(SoundManager._pausedSources, sound._source)
 		end
 	end
-	pcall(love.audio.pause, SoundManager._pausedSources)
+	if #SoundManager._pausedSources > 0 and not pcall(love.audio.pause, SoundManager._pausedSources) then
+		for i = #SoundManager._pausedSources, 1, -1 do
+			local source = SoundManager._pausedSources[i]
+			if not pcall(source.pause, source) then table.remove(SoundManager._pausedSources, i) end
+		end
+	end
 
 	SoundManager.paused = true
 end
 
 function SoundManager.resume()
-	pcall(love.audio.play, SoundManager._pausedSources)
-	table.clear(SoundManager._pausedSources)
-
 	SoundManager.paused = false
+
+	if #SoundManager._pausedSources > 0 and not pcall(love.audio.play, SoundManager._pausedSources) then  -- creepy! dont use ipairs here...
+		for i = 1, #SoundManager._pausedSources do pcall(SoundManager._pausedSources[i].play, SoundManager._pausedSources[i]) end
+	end
+	table.clear(SoundManager._pausedSources)
 end
 
 function SoundManager.update()
