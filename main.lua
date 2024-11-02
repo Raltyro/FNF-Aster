@@ -25,6 +25,7 @@ function love.load()
 		fullscreen = isMobile,
 		resizable = not isMobile,
 		vsync = 0,
+		depth = true,
 		usedpiscale = false
 	})
 	native.setDarkMode(true)

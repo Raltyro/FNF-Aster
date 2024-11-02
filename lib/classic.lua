@@ -92,8 +92,7 @@ function Classic:__tostring() return self.__class end
 
 function Classic:__call(...)
 	local obj = setmetatable({}, self)
-	obj:new(...)
-	return obj
+	return obj:new(...) or obj
 end
 
 return Classic

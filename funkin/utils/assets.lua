@@ -1,5 +1,7 @@
 local Assets = {}
 
+Assets.useCounts = {}
+
 function Assets.exists(path, isDir)
 	local v = love.filesystem.getInfo(path)
 	return v and (v.type == 'folder') == (isDir or false)
@@ -9,6 +11,7 @@ Assets.cachedSounds = {}
 
 function Assets.getMusic(path) return Assets.getSound(path, true) end
 function Assets.getSound(path, stream)
+	Assets.useCounts[path] = (Assets.useCounts[path] or 0) + 1
 	if stream then
 		return love.audio.newSource(path, 'stream')
 	else
@@ -41,8 +44,10 @@ function Assets.soundCached(path) return Assets.cachedSounds[path] ~= nil end
 Assets.cachedImages = {}
 
 function Assets.getImage(path)
+	Assets.useCounts[path] = (Assets.useCounts[path] or 0) + 1
+
 	local img = Assets.cachedImages[path]
-	if img ~= nil and pcall(img.getPointer, img) then return img
+	if img ~= nil and pcall(img.isReadable, img) then return img
 	elseif Assets.exists(path) then
 		local s, v = pcall(love.graphics.newImage, path)
 		if s then
@@ -107,6 +112,23 @@ function Assets.pathExcluded(path)
 	path = path:lower()
 	for i = #Assets.pathExclusions, 1, -1 do if path:endsWith(Assets.pathExclusions[i]) then return true end end
 	return false
+end
+
+function Assets.clearUnused()
+	for i, useCount in pairs(Assets.useCounts) do
+		if useCount == 0 then
+			Assets.useCounts[i] = nil
+			Assets["decache" .. (Assets.cachedSounds[i] and 'Sound' or 'Image')](i)
+		else
+			Assets.useCounts[i] = 0
+		end
+	end
+end
+
+function Assets.clearCache()
+	for i in pairs(Assets.cachedImages) do Assets.decacheImage(i) end
+	for i in pairs(Assets.cachedSounds) do Assets.decacheSound(i) end
+	table.clear(Assets.cachedTexts)
 end
 
 return Assets

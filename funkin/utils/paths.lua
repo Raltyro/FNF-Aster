@@ -3,8 +3,8 @@ local Paths = {
 		IMAGES = {'png', 'jpg', 'jpeg', 'bmp'},
 		SOUNDS = {'ogg', 'oga', 'wav', 'mp3'},
 		VIDEOS = {'ogv', 'ogg'},
-		FRAGS = {'frag', 'glsl'},
-		VERTS = {'vert'},
+		FRAGS = {'frag', 'fsh', 'glsl'},
+		VERTS = {'vert', 'vsh', 'glsl'},
 		FONTS = {'otf', 'ttf'}
 	}
 }
@@ -17,7 +17,7 @@ local lowercaseFS = love.system.getOS() == "Windows"
 local function getPrefix(...) local v = {...} table.reverse(v) return table.concat(v, '/') end
 local function getSuffix(...) return table.concat({...}, '-') end
 function Paths.getPath(file, prefix, assetType)
-	file = getPrefix(prefix, 'assets') .. '/' .. file
+	file = getPrefix(prefix, Paths.currentLevel or '', 'assets') .. '/' .. file
 	if lowercaseFS then file = file:lower() end
 	if Paths._cachedPaths[file] == false or file:hasExt() then return file
 	elseif assetType ~= nil then assetType = assetType:upper() .. "S" end

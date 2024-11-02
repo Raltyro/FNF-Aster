@@ -1,20 +1,56 @@
+local Shader = require("funkin.graphics.shader")
+local lovg = love.graphics
+
 local Actor = Basic:extend("Actor")
 
 function Actor:new(x, y, z)
 	Actor.super.new(self)
 
-	self.position, self.rotation = {x = x or 0, y = y or 0, z = z or 0}, {x = 0, y = 0, z = 0}
-	self.angle = 0 -- Rotates this Actor by Perspective
+	self.position, self.rotation, self.scale = Vector3(x, y, z), Vector3(), Vector3(1, 1, 1)
+	self.visible = true
+	self.layer = 0
 
-	self.offset = {x = 0, y = 0, z = 0}
-	self.origin = {x = 0, y = 0, z = 0}
-	self.size = {x = 0, y = 0, z = 0}
-	self.scale = {x = 1, y = 1, z = 1}
-	self.scrollFactor = {x = 1, y = 1, z = 1} -- How much it scrolls with the Camera Scroll Position
+	self.offset = Vector3()
+	self.origin = Vector3()
+	self.size = Vector3()
 	self.flip = {x = false, y = false, z = false}
 
-	--self.shader = nil
-	self.diffuse = {r = 1, g = 1, b = 1, a = 1}
+	self.smoothing = true
+	self.wrap = {x = 'clamp', y = 'clamp', z = 'clamp'}
+
+	self.diffuse = Color.WHITE
+	self.shader = nil
+	self.depthmode = 'less'
+	self.cullmode = 'none'
+	self.alphamode = 'alphamultiply'
+	self.blend = 'alpha'
+	self.wireframe = false
+end
+
+local none, alpha, clamp, linear, nearest = 'none', 'alpha', 'clamp', 'linear', 'nearest'
+function Actor:applyStack(texture, mesh, view, projection)
+	if texture then
+		texture:setFilter(self.smoothing and linear or nearest)
+		texture:setWrap(self.wrap.x or clamp, self.wrap.y, self.wrap.z)
+		if mesh then mesh:setTexture(texture) end
+	end
+
+	local shader = self.shader or Shader.DEFAULT
+	--Shader.view(shader, view)
+	--Shader.projection(shader, projection)
+
+	lovg.setShader(shader)
+	lovg.setColor(self.diffuse.r, self.diffuse.g, self.diffuse.b, self.diffuse.a)
+	lovg.setBlendMode(self.blend or alpha, self.alphamode)
+	lovg.setWireframe(self.wireframe == true)
+	lovg.setMeshCullMode(self.cullmode or none)
+	if self.depthmode then lovg.setDepthMode(self.depthmode, true) else lovg.setDepthMode() end
+
+	return shader
+end
+
+function Actor:applyMatrix(matrix)
+	return matrix:translate(self.position):compose(self.origin, self.rotation, self.scale):translate(self.offset)
 end
 
 function Actor:setPosition(x, y, z)
@@ -28,11 +64,6 @@ end
 function Actor:destroy()
 	Actor.super.destroy(self)
 	self.shader = nil
-end
-
-function Actor:setScrollFactor(x, y, z)
-	x = x or self.scrollFactor.x
-	self.scrollFactor.x, self.scrollFactor.y, self.scrollFactor.z = x, y or x, z or x
 end
 
 function Actor:getMidpoint()

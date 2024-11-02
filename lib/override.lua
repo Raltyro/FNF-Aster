@@ -227,6 +227,9 @@ function love.graphics.getFixedScale()
 	return math_min(winW / (game.width or 800), winH / (game.height or 600))
 end
 
+local push, all = love.graphics.push, 'all'
+function love.graphics.pushall() return push(all) end
+
 if love.system.getDevice() == "Desktop" then
 	function love.window.getMaxDesktopDimensions()
 		local xmax, ymax = 0, 0

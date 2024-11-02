@@ -1,7 +1,12 @@
 local TitleScene = Scene:extend("TitleScene")
 
 function TitleScene:enter()
+	Assets.clearUnused()
+
 	TitleScene.super.enter(self)
+
+	local sprite = Sprite(Assets.getImage(Paths.image('logoBumpin')))
+	self:add(sprite)
 
 	SoundManager.playMusic(Assets.getMusic(Paths.music('freakyMenu')))
 	self.conductor:setBPM(102)

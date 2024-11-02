@@ -6,7 +6,9 @@ function Group:new()
 end
 
 function Group:add(obj)
-	return self:insert(obj)
+	table.insert(self.members, obj)
+	if obj.enter then obj:enter(self) end
+	return obj
 end
 
 function Group:insert(idx, obj)
