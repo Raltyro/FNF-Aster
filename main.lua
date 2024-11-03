@@ -40,10 +40,16 @@ function love.load()
 	funkin.init()
 end
 
+function love.keypressed(t, b, s, r)
+	if love.keyboard.isDown("lctrl", "rctrl") then
+		if b == "f4" then error("force crash") end
+		if b == "`" then return "restart" end
+	end
+end
+
 love.update = funkin.update
 love.draw = funkin.draw
 love.focus = funkin.focus
-love.keypressed = funkin.keypressed
 love.keyreleased = funkin.keyreleased
 love.touchpressed = funkin.touchpressed
 love.touchmoved = funkin.touchmoved

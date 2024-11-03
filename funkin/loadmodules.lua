@@ -2,11 +2,14 @@
 
 Classic = require("lib.classic")
 
+Vector2 = require("funkin.math.vector2")
+Vector3 = require("funkin.math.vector3")
+Vector4 = require("funkin.math.vector4")
+Bound2 = require("funkin.math.bound2")
+Matrix = require("funkin.math.matrix")
+
 Paths = require("funkin.utils.paths")
 Assets = require("funkin.utils.assets")
-Vector2 = require("funkin.utils.vector2")
-Vector3 = require("funkin.utils.vector3")
-Matrix = require("funkin.utils.matrix")
 Color = require("funkin.utils.color")
 
 Basic = require("funkin.basic")

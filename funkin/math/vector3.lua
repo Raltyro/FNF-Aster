@@ -20,6 +20,7 @@ function Vector3:clone(other)
 	end
 	return Vector3(self.x, self.y, self.z)
 end
+function Vector3:set(x, y, z) self.x, self.y, self.z = x or self.x, y or self.y, z or self.z end
 function Vector3:unpack() return self.x, self.y, self.z end
 function Vector3:add(other) self.x, self.y, self.z = self.x + other.x, self.y + other.y, self.z + other.z; return self end
 function Vector3:subtract(other) self.x, self.y, self.z = self.x - other.x, self.y - other.y, self.z - other.z; return self end

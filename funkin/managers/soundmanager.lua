@@ -68,6 +68,8 @@ end
 function SoundManager.resume()
 	SoundManager.paused = false
 
+	for i = 1, #SoundManager._pausedSources do SoundManager._pausedSources[i]:seek(SoundManager._pausedSources[i]:tell()) end
+
 	if #SoundManager._pausedSources > 0 and not pcall(love.audio.play, SoundManager._pausedSources) then  -- creepy! dont use ipairs here...
 		for i = 1, #SoundManager._pausedSources do pcall(SoundManager._pausedSources[i].play, SoundManager._pausedSources[i]) end
 	end

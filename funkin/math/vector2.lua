@@ -21,6 +21,7 @@ function Vector2:clone(other)
 	return Vector2(self.x, self.y)
 end
 function Vector2:unpack() return self.x, self.y end
+function Vector2:set(x, y) self.x, self.y = x or self.x, y or self.y end
 function Vector2:add(other) self.x, self.y = self.x + other.x, self.y + other.y; return self end
 function Vector2:subtract(other) self.x, self.y = self.x - other.x, self.y - other.y; return self end
 function Vector2:multiply(other)
@@ -80,10 +81,10 @@ function Vector2:__eq(other) return self.x == other.x and self.y == other.y end
 function Vector2:__unm() return Vector2(-self.x, -self.y) end
 function Vector2:__tostring() return 'Vector2 (' .. table.concat({self:unpack()}, ', ') .. ')'  end
 
-Vector2.ZERO = Vector2(0, 0)
-Vector2.ONE = Vector2(1, 1)
-Vector2.X = Vector2(1, 0)
-Vector2.Y = Vector2(0, 1)
+function Vector2.get_ZERO() return Vector2(0, 0) end
+function Vector2.get_ONE() return Vector2(1, 1) end
+function Vector2.get_X() return Vector2(1, 0) end
+function Vector2.get_Y() return Vector2(0, 1) end
 
 if status then
 	xpcall(function()

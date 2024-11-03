@@ -18,6 +18,10 @@ function Sprite:render()
 	frame:render(self)
 end
 
+function Sprite:get_size()
+	return self.frame and self.frame.size
+end
+
 --[[
 function Sprite:get_frame()
 	return nil

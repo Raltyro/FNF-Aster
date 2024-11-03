@@ -5,8 +5,8 @@ function TitleScene:enter()
 
 	TitleScene.super.enter(self)
 
-	local sprite = Sprite(Assets.getImage(Paths.image('logoBumpin')))
-	self:add(sprite)
+	self.sprite = Sprite(Assets.getImage(Paths.image('logoBumpin')))
+	self:add(self.sprite)
 
 	SoundManager.playMusic(Assets.getMusic(Paths.music('freakyMenu')))
 	self.conductor:setBPM(102)
@@ -25,6 +25,15 @@ function TitleScene:metronomeHit(measureHit)
 	end
 
 	print(beat, measure, pos, Conductor.instance:getTimeInBPM(pos, Conductor.instance.currentTimeChangeIdx))
+end
+
+function TitleScene:update(dt)
+	TitleScene.super.update(self, dt)
+
+	self.timer = (self.timer or 0) + dt
+	self.sprite.position:set(math.cos(self.timer) * .1, math.sin(self.timer) * .1)
+	self.sprite.rotation:set(self.timer * 100, self.timer * 200, self.timer * 130)
+	self.sprite.fov = math.abs(math.cos(self.timer) * 150)
 end
 
 return TitleScene

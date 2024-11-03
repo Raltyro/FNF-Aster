@@ -1,11 +1,10 @@
 local Shader = Classic:extend("Shader")
-local pragmas = {
+Shader.pragmas = {
 	fragment = {
-		header = [[
-			uniform Image MainTex;
-		]],
-		body = [[
-			love_PixelColor = Texel(MainTex, love_PixelCoord) * VaryingColor;
+		default = [[
+			vec4 effect(vec4 color, Image tex, vec2 texture_coords, vec2 screen_coords) {
+				return Texel(tex, texture_coords) * color;
+			}
 		]]
 	},
 	vertex = {
@@ -17,16 +16,19 @@ local pragmas = {
 			varying vec4 worldPosition;
 			varying vec4 viewPosition;
 			varying vec4 screenPosition;
+
+			vec4 project(vec4 vertex) {
+				return screenPosition = projectionMatrix * (viewPosition = viewMatrix * (worldPosition = modelMatrix * vertex));
+			}
 		]],
-		body = [[
-			worldPosition = modelMatrix * VertexPosition;
-			viewPosition = viewMatrix * worldPosition;
-			screenPosition = projectionMatrix * viewPosition;
+		default = [[
+			#pragma header
+			vec4 position(mat4 transform_projection, vec4 vertex_position) {
+				return project(vertex_position);
+			}
 		]]
 	}
 }
-pragmas.fragment.default = love.filesystem.read('funkin/graphics/shader/default.fsh')
-pragmas.vertex.default = love.filesystem.read('funkin/graphics/shader/default.vsh')
 
 local function include_pragmas(code, pragmas)
 	local lines = {}
@@ -40,13 +42,14 @@ local function include_pragmas(code, pragmas)
 end
 
 function Shader:new(fragmentSource, vertexSource)
-	fragmentSource, vertexSource = include_pragmas(fragmentSource or pragmas.fragment.default, pragmas.fragment),
-		include_pragmas(vertexSource or pragmas.vertex.default, pragmas.vertex)
+	fragmentSource, vertexSource = include_pragmas(fragmentSource or Shader.pragmas.fragment.default, Shader.pragmas.fragment),
+		include_pragmas(vertexSource or Shader.pragmas.vertex.default, Shader.pragmas.vertex)
 
 	local s, w = love.graphics.validateShader(false, fragmentSource, vertexSource)
 	if not s then
 		warn("Unable to Validate Shader", w, fragmentSource, vertexSource)
-		fragmentSource, vertexSource = include_pragmas(pragmas.fragment.default, pragmas.fragment), include_pragmas(pragmas.vertex.default, pragmas.vertex)
+		fragmentSource, vertexSource = include_pragmas(Shader.pragmas.fragment.default, Shader.pragmas.fragment),
+			include_pragmas(Shader.pragmas.vertex.default, Shader.pragmas.vertex)
 	end
 
 	local shader = love.graphics.newShader(fragmentSource, vertexSource)

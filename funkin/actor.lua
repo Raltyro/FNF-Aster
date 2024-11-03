@@ -6,7 +6,7 @@ local Actor = Basic:extend("Actor")
 function Actor:new(x, y, z)
 	Actor.super.new(self)
 
-	self.position, self.rotation, self.scale = Vector3(x, y, z), Vector3(), Vector3(1, 1, 1)
+	self.position, self.rotation, self.scale = Vector3(x, y, z), Vector3(0, 0, 0), Vector3.ONE
 	self.visible = true
 	self.layer = 0
 
@@ -20,10 +20,10 @@ function Actor:new(x, y, z)
 
 	self.diffuse = Color.WHITE
 	self.shader = nil
-	self.depthmode = 'less'
-	self.cullmode = 'none'
-	self.alphamode = 'alphamultiply'
+	self.depth = 'less'
+	self.cull = 'none'
 	self.blend = 'alpha'
+	self.alphamode = 'alphamultiply'
 	self.wireframe = false
 end
 
@@ -36,15 +36,15 @@ function Actor:applyStack(texture, mesh, view, projection)
 	end
 
 	local shader = self.shader or Shader.DEFAULT
-	--Shader.view(shader, view)
-	--Shader.projection(shader, projection)
+	Shader.view(shader, Matrix():lookAt(Vector3.ZERO, -Vector3.Z, Vector3.Y))
+	Shader.projection(shader, Matrix())
 
 	lovg.setShader(shader)
 	lovg.setColor(self.diffuse.r, self.diffuse.g, self.diffuse.b, self.diffuse.a)
 	lovg.setBlendMode(self.blend or alpha, self.alphamode)
 	lovg.setWireframe(self.wireframe == true)
-	lovg.setMeshCullMode(self.cullmode or none)
-	if self.depthmode then lovg.setDepthMode(self.depthmode, true) else lovg.setDepthMode() end
+	lovg.setMeshCullMode(self.cull or none)
+	if self.depth then lovg.setDepthMode(self.depth, true) else lovg.setDepthMode() end
 
 	return shader
 end
