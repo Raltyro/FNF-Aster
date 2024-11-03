@@ -30,10 +30,10 @@ end
 function TitleScene:update(dt)
 	TitleScene.super.update(self, dt)
 
-	self.timer = (self.timer or 0) + dt
-	self.sprite.position:set(math.cos(self.timer) * .1, math.sin(self.timer) * .1)
-	self.sprite.rotation:set(self.timer * 100, self.timer * 200, self.timer * 130)
-	self.sprite.fov = math.abs(math.cos(self.timer) * 150)
+	--[[self.timer = (self.timer or 0) + dt
+	--self.sprite.position:set(math.cos(self.timer) * 500, math.sin(self.timer) * 500, math.cos(self.timer * 500))
+	self.sprite.rotation:set(0, 0, self.timer * 130)
+	self.sprite.position:set(0, 0, 5000)]]
 end
 
 return TitleScene

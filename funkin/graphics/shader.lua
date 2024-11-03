@@ -18,7 +18,9 @@ Shader.pragmas = {
 			varying vec4 screenPosition;
 
 			vec4 project(vec4 vertex) {
-				return screenPosition = projectionMatrix * (viewPosition = viewMatrix * (worldPosition = modelMatrix * vertex));
+				screenPosition = projectionMatrix * (viewPosition = viewMatrix * (worldPosition = modelMatrix * vertex));
+				screenPosition.y *= -1.;
+				return screenPosition;
 			}
 		]],
 		default = [[

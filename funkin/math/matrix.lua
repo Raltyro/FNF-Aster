@@ -84,7 +84,7 @@ end
 
 function Matrix:scale(x, y, z)
 	if type(x) == t then x, y, z = x.x, x.y, x.z end
-	temp:identity(); temp[1], temp[6], temp[11] = x or 1, y or 1, z or 1
+	temp:identity(); temp[1], temp[6], temp[11] = x or 1, y or x, z or x
 	return self:prepend(temp)
 end
 
@@ -132,61 +132,62 @@ function Matrix:transpose()
 end
 
 function Matrix:compose(position, rotation, scale)
-	temp:identity()
+	if rotation ~= nil then
+		local rx, ry, rz, rw = rotation.x or 0, rotation.y or 0, rotation.z or 0, rotation.w
+		if rw == nil then
+			rx, ry, rz = rad(rx), rad(ry), rad(rz)
+			local cc, sc, cb, sb, ca, sa = cos(rx), sin(rx), cos(ry), sin(ry), cos(rz), sin(rz)
 
-	local sx, sy, sz, rx, ry, rz, rw =
-		scale.x or 1, scale.y or 1, scale.z or 1,
-		rotation.x or 0, rotation.y or 0, rotation.z or 0, rotation.w
+			temp[1], temp[5], temp[9],
+			temp[2], temp[6], temp[10],
+			temp[3], temp[7], temp[11] =
+				ca*cb, ca*sb*sc - sa*cc, ca*sb*cc + sa*sc,
+				sa*cb, sa*sb*sc + ca*cc, sa*sb*cc - ca*sc,
+				-sb, cb*sc, cb*cc
+		else
+			local x2, y2, z2 = rx + rx, ry + ry, rz + rz
+			local xx, xy, xz,
+				yy, yz, zz,
+				wx, wy, wz =
+				rx * x2, rx * y2, rx * z2,
+				ry * y2, ry * z2, rz * z2,
+				rw * x2, rw * y2, rw * z2
 
-	if rw == nil then
-		rx, ry, rz = rad(rx), rad(ry), rad(rz)
-		local cc, sc, cb, sb, ca, sa = cos(rx), sin(rx), cos(ry), sin(ry), cos(rz), sin(rz)
-
-		temp[1], temp[5], temp[9],
-		temp[2], temp[6], temp[10],
-		temp[3], temp[7], temp[11] =
-			ca*cb, ca*sb*sc - sa*cc, ca*sb*cc + sa*sc,
-			sa*cb, sa*sb*sc + ca*cc, sa*sb*cc - ca*sc,
-			-sb, cb*sc, cb*cc
+			temp[1], temp[2], temp[3],
+			temp[5], temp[6], temp[7],
+			temp[9], temp[10], temp[11] =
+				1 - (yy + zz), xy + wz, xz - wy,
+				xy - wz, 1 - (xx + zz), yz + wx,
+				xz + wy, yz - wx, 1 - (xx + yy)
+		end
+		temp[4], temp[8], temp[12], temp[16] = 0, 0, 0, 1
 	else
-		local x2, y2, z2 = rx + rx, ry + ry, rz + rz
-		local xx, xy, xz,
-			yy, yz, zz,
-			wx, wy, wz =
-			rx * x2, rx * y2, rx * z2,
-			ry * y2, ry * z2, rz * z2,
-			rw * x2, rw * y2, rw * z2
+		temp:identity()
+	end
 
+	if scale ~= nil then
+		local sx, sy, sz = scale.x or 1, scale.y or 1, scale.z or 1
 		temp[1], temp[2], temp[3],
 		temp[5], temp[6], temp[7],
 		temp[9], temp[10], temp[11] =
-			1 - (yy + zz), xy + wz, xz - wy,
-			xy - wz, 1 - (xx + zz), yz + wx,
-			xz + wy, yz - wx, 1 - (xx + yy)
+			temp[1] * sx, temp[2] * sx, temp[3] * sx,
+			temp[5] * sy, temp[6] * sy, temp[7] * sy,
+			temp[9] * sz, temp[10] * sz, temp[11] * sz
 	end
 
-	temp[1], temp[2], temp[3],
-	temp[5], temp[6], temp[7],
-	temp[9], temp[10], temp[11],
-	temp[13], temp[14], temp[15],
-	temp[4], temp[8], temp[12], temp[16] =
-		temp[1] * sx, temp[2] * sx, temp[3] * sx,
-		temp[5] * sy, temp[6] * sy, temp[7] * sy,
-		temp[9] * sz, temp[10] * sz, temp[11] * sz,
-		position.x or 0, position.y or 0, position.z or 0,
-		0, 0, 0, 1
+	temp[13], temp[14], temp[15] = position.x or 0, position.y or 0, position.z or 0
 
 	return self:prepend(temp)
 end
 
+--TODO: near, far
 function Matrix:perspective(fovy, aspect, near, far)
-	local top = tan(rad(fovy) / 2)
-	self[1] = 1 / (top * aspect)
-	self[6] = 1 / top
-	self[11] = -(far + near) / (far - near)
-	self[12] = -1
-	self[15] = -(2 * far * near) / (far - near)
-	self[16] = 0
+	self[1] = 1 / aspect
+	--self[6] = (1 / top)
+	self[11] = 0 --far?
+	self[12] = tan(rad(fovy) * .5)
+	self[15] = 0 --near?
+	--self[16] = 0
 
 	return self
 end
@@ -198,7 +199,7 @@ function Matrix:lookAt(eye, center, up)
 
 	self[1], self[2], self[3], self[4] = x_axis.x, y_axis.x, z_axis.x, 0
 	self[5], self[6], self[7], self[8] = x_axis.y, y_axis.y, z_axis.y, 0
-	self[9], self[10], self[11], self[9] = x_axis.z, y_axis.z, z_axis.z, 0
+	self[9], self[10], self[11], self[12] = x_axis.z, y_axis.z, z_axis.z, 0
 	self[13], self[14], self[15], self[16] =
 		-self[1]*eye.x - self[5]*eye.y - self[9]*eye.z,
 		-self[2]*eye.x - self[6]*eye.y - self[10]*eye.z,

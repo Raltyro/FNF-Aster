@@ -1,4 +1,4 @@
-local Camera = Sprite:extend("Camera")
+local Camera = Actor:extend("Camera")
 
 
 

@@ -1,4 +1,5 @@
 local Shader = require("funkin.graphics.shader")
+local Perspective = require("funkin.math.perspective")
 local lovg = love.graphics
 
 local Actor = Basic:extend("Actor")
@@ -6,13 +7,15 @@ local Actor = Basic:extend("Actor")
 function Actor:new(x, y, z)
 	Actor.super.new(self)
 
-	self.position, self.rotation, self.scale = Vector3(x, y, z), Vector3(0, 0, 0), Vector3.ONE
+	self.position, self.rotation, self.scale = Vector3(x, y, z), Vector3.ZERO, Vector3.ONE
 	self.visible = true
 	self.layer = 0
 
-	self.offset = Vector3()
-	self.origin = Vector3()
-	self.size = Vector3()
+	self.perspective = Perspective()
+
+	self.offset = Vector3.ZERO
+	self.origin = Vector3.ZERO
+	self.size = Vector3.ZERO
 	self.flip = {x = false, y = false, z = false}
 
 	self.smoothing = true
@@ -28,7 +31,7 @@ function Actor:new(x, y, z)
 end
 
 local none, alpha, clamp, linear, nearest = 'none', 'alpha', 'clamp', 'linear', 'nearest'
-function Actor:applyStack(texture, mesh, view, projection)
+function Actor:applyStack(texture, mesh, model, view, projection)
 	if texture then
 		texture:setFilter(self.smoothing and linear or nearest)
 		texture:setWrap(self.wrap.x or clamp, self.wrap.y, self.wrap.z)
@@ -36,8 +39,9 @@ function Actor:applyStack(texture, mesh, view, projection)
 	end
 
 	local shader = self.shader or Shader.DEFAULT
-	Shader.view(shader, Matrix():lookAt(Vector3.ZERO, -Vector3.Z, Vector3.Y))
-	Shader.projection(shader, Matrix())
+	Shader.model(shader, model)
+	Shader.view(shader, view or self.perspective.view)
+	Shader.projection(shader, projection or self.perspective.projection)
 
 	lovg.setShader(shader)
 	lovg.setColor(self.diffuse.r, self.diffuse.g, self.diffuse.b, self.diffuse.a)
@@ -50,7 +54,7 @@ function Actor:applyStack(texture, mesh, view, projection)
 end
 
 function Actor:applyMatrix(matrix)
-	return matrix:translate(self.position):compose(self.origin, self.rotation, self.scale):translate(self.offset)
+	return matrix:translate(self.offset):compose(self.position, self.rotation, self.scale):translate(self.origin)
 end
 
 function Actor:setPosition(x, y, z)

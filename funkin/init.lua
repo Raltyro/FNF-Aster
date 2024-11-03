@@ -3,6 +3,7 @@ require("funkin.loadmodules")
 funkin = {}
 
 local Discord = require("funkin.api.discord")
+local Perspective = require("funkin.math.perspective")
 
 function funkin.init(initialScene)
 	if initialScene == nil then initialScene = require("funkin.menus.titlescene") end
@@ -17,6 +18,7 @@ function funkin.update(deltaTime)
 	funkin.deltaTime = deltaTime
 
 	SceneManager.update(deltaTime)
+
 	if love.window.hasFocus() or not love.autoPause then
 		SoundManager.update()
 	end
@@ -24,6 +26,8 @@ function funkin.update(deltaTime)
 end
 
 function funkin.draw()
+	local w, h = love.graphics.getWidth(), love.graphics.getHeight()
+	Perspective.aspect, Perspective.scale = w / h, 1 / math.min(w, h)
 	SceneManager.render()
 end
 
