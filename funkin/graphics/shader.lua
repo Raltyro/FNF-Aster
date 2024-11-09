@@ -1,9 +1,17 @@
 local Shader = Classic:extend("Shader")
 Shader.pragmas = {
 	fragment = {
+		header = [[
+			vec4 Texture(Image tex, vec2 coord) {
+				vec4 c = Texel(tex, coord);
+				if (c.a == 0) discard;
+				return c;
+			}
+		]],
 		default = [[
+			#pragma header
 			vec4 effect(vec4 color, Image tex, vec2 texture_coords, vec2 screen_coords) {
-				return Texel(tex, texture_coords) * color;
+				return Texture(tex, texture_coords) * color;
 			}
 		]]
 	},
@@ -17,7 +25,7 @@ Shader.pragmas = {
 			varying vec4 viewPosition;
 			varying vec4 screenPosition;
 
-			vec4 project(vec4 vertex) {
+			vec4 Project(vec4 vertex) {
 				screenPosition = projectionMatrix * (viewPosition = viewMatrix * (worldPosition = modelMatrix * vertex));
 				screenPosition.y *= -1.;
 				return screenPosition;
@@ -26,7 +34,7 @@ Shader.pragmas = {
 		default = [[
 			#pragma header
 			vec4 position(mat4 transform_projection, vec4 vertex_position) {
-				return project(vertex_position);
+				return Project(vertex_position);
 			}
 		]]
 	}

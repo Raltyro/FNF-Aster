@@ -4,6 +4,8 @@ local Sprite = Actor:extend("Sprite")
 
 function Sprite:new(frames, x, y, z)
 	Sprite.super.new(self, x, y, z)
+	self.size = nil
+
 	if type(frames) == 'userdata' and frames.typeOf then
 		if frames:typeOf('Texture') then self.frame = Frame(frames) end
 	else

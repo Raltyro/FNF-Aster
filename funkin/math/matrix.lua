@@ -183,10 +183,10 @@ end
 --TODO: near, far
 function Matrix:perspective(fovy, aspect, near, far)
 	self[1] = 1 / aspect
-	--self[6] = (1 / top)
-	self[11] = 0 --far?
+	--self[6] = aspect
+	self[11] = 0.1 --far?
 	self[12] = tan(rad(fovy) * .5)
-	self[15] = 0 --near?
+	self[15] = 0.1 --near?
 	--self[16] = 0
 
 	return self

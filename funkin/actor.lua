@@ -14,7 +14,7 @@ function Actor:new(x, y, z)
 	self.perspective = Perspective()
 
 	self.offset = Vector3.ZERO
-	self.origin = Vector3.ZERO
+	self.origin = Vector3(.5, .5, .5)
 	self.size = Vector3.ZERO
 	self.flip = {x = false, y = false, z = false}
 
@@ -23,7 +23,7 @@ function Actor:new(x, y, z)
 
 	self.diffuse = Color.WHITE
 	self.shader = nil
-	self.depth = 'less'
+	self.depth = 'always' -- implement z sorting maybe idfk
 	self.cull = 'none'
 	self.blend = 'alpha'
 	self.alphamode = 'alphamultiply'
@@ -48,13 +48,13 @@ function Actor:applyStack(texture, mesh, model, view, projection)
 	lovg.setBlendMode(self.blend or alpha, self.alphamode)
 	lovg.setWireframe(self.wireframe == true)
 	lovg.setMeshCullMode(self.cull or none)
-	if self.depth then lovg.setDepthMode(self.depth, true) else lovg.setDepthMode() end
+	if self.depth ~= nil then lovg.setDepthMode(self.depth, true) else lovg.setDepthMode() end
 
 	return shader
 end
 
 function Actor:applyMatrix(matrix)
-	return matrix:translate(self.offset):compose(self.position, self.rotation, self.scale):translate(self.origin)
+	return matrix:compose(self.position, self.rotation, self.scale):translate(-self.origin.x * self.size.x, -self.origin.y * self.size.y, -self.origin.z * self.size.z):translate(self.offset)
 end
 
 function Actor:setPosition(x, y, z)

@@ -28,10 +28,10 @@ function Frame:render(sprite)
 	local mesh = Frame.sharedMesh
 	if mesh == nil then
 		mesh = lovg.newMesh(require("funkin.graphics.Mesh").vertexFormat, {
-			{-1, -1, 0, 0, 0},
-			{1, -1, 0, 1, 0},
+			{0, 0, 0, 0, 0},
+			{1, 0, 0, 1, 0},
 			{1, 1, 0, 1, 1},
-			{-1, 1, 0, 0, 1}
+			{0, 1, 0, 0, 1}
 		}, 'fan', 'static')
 		Frame.sharedMesh = mesh
 	end
